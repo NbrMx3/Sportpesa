@@ -22,8 +22,8 @@ type BetSelection = {
 	label: string;
 };
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
-const SOCKET_BASE = import.meta.env.VITE_SOCKET_BASE || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_BASE || "/api";
+const SOCKET_BASE = import.meta.env.VITE_SOCKET_BASE || "";
 
 function formatKickoff(dateString: string) {
 	const date = new Date(dateString);
@@ -49,16 +49,40 @@ function App() {
 		async function loadMatches() {
 			try {
 				setLoading(true);
-				const response = await fetch(`${API_BASE}/matches`);
-				const data = await response.json();
+				const footballResponse = await fetch(`${API_BASE}/football/matches`);
+				const footballData = await footballResponse.json();
+
+				if (!footballResponse.ok) {
+					throw new Error(footballData?.error || "Football endpoint failed");
+				}
 
 				if (mounted) {
-					setMatches(data.matches ?? []);
+					setMatches(footballData.matches ?? []);
 					setError("");
+					setLiveStatus(
+						footballData.source === "internal-fallback"
+							? "Using internal fallback odds"
+							: "Live football feed connected"
+					);
 				}
 			} catch {
-				if (mounted) {
-					setError("Unable to fetch matches. Ensure API is running on port 5000.");
+				try {
+					const fallbackResponse = await fetch(`${API_BASE}/matches`);
+					const fallbackData = await fallbackResponse.json();
+
+					if (!fallbackResponse.ok) {
+						throw new Error(fallbackData?.error || "Fallback endpoint failed");
+					}
+
+					if (mounted) {
+						setMatches(fallbackData.matches ?? []);
+						setError("");
+						setLiveStatus("Using local match feed");
+					}
+				} catch {
+					if (mounted) {
+						setError("Unable to fetch football matches. Ensure API is running on port 5000.");
+					}
 				}
 			} finally {
 				if (mounted) {
@@ -75,6 +99,62 @@ function App() {
 	}, []);
 
 	useEffect(() => {
+		let mounted = true;
+
+		async function refreshFootballOdds() {
+			try {
+				const response = await fetch(`${API_BASE}/football/odds`);
+				const data = await response.json();
+
+				if (!response.ok) {
+					return;
+				}
+
+				if (!mounted || !Array.isArray(data.odds)) {
+					return;
+				}
+
+				setMatches((previous) => {
+					const byId = new Map<string, Record<Outcome, number>>();
+
+					for (const entry of data.odds as Array<{ matchId?: string; odds?: Partial<Record<Outcome, number>> }>) {
+						if (!entry?.matchId || !entry.odds) {
+							continue;
+						}
+
+						const home = Number(entry.odds.home);
+						const draw = Number(entry.odds.draw);
+						const away = Number(entry.odds.away);
+
+						if (!Number.isFinite(home) || !Number.isFinite(draw) || !Number.isFinite(away)) {
+							continue;
+						}
+
+						byId.set(entry.matchId, { home, draw, away });
+					}
+
+					return previous.map((match) => {
+						const updatedOdds = byId.get(match.id);
+						if (!updatedOdds) {
+							return match;
+						}
+
+						return {
+							...match,
+							odds: updatedOdds
+						};
+					});
+				});
+
+				setLiveStatus(data.source === "internal-fallback" ? "Fallback odds updates" : "Live football odds updating");
+			} catch {
+				// Keep existing odds if polling fails.
+			}
+		}
+
+		refreshFootballOdds();
+		const pollId = window.setInterval(refreshFootballOdds, 15000);
+
 		const socket: Socket = io(SOCKET_BASE, {
 			transports: ["websocket"]
 		});
@@ -97,6 +177,8 @@ function App() {
 		});
 
 		return () => {
+			mounted = false;
+			window.clearInterval(pollId);
 			socket.disconnect();
 		};
 	}, []);

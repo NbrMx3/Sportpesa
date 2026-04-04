@@ -83,6 +83,8 @@ Example: `100 KES x 2.5 = 250 KES`
 - `POST /api/wallet/withdraw`
 - `GET /api/matches`
 - `GET /api/odds`
+- `GET /api/football/matches` (external football feed)
+- `GET /api/football/odds` (external football odds)
 - `PATCH /api/matches/:matchId/odds` (admin)
 - `POST /api/bets`
 - `GET /api/bets/my`
@@ -92,6 +94,20 @@ Example: `100 KES x 2.5 = 250 KES`
 - `GET /api/admin/users` (admin)
 - `GET /api/admin/bets` (admin)
 - `GET /api/admin/fraud-signals` (admin)
+
+## External football providers
+
+This server can fetch football fixtures and odds from:
+
+- ClearSports API (preferred first)
+- Odds-API.io (fallback)
+
+Configure provider credentials in `.env`:
+
+- `CLEARSPORTS_API_KEY`
+- `ODDS_API_KEY`
+
+Optional paths/base URLs are listed in `.env.example`.
 
 ## Socket.io events
 

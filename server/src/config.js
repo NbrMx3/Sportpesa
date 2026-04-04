@@ -26,11 +26,41 @@ const normalizedDatabaseUrl = selectedDatabaseUrl
   .replace(/^['\"]/, "")
   .replace(/['\"]$/, "");
 
+function normalizeSslMode(databaseUrl) {
+  if (!databaseUrl) {
+    return databaseUrl;
+  }
+
+  try {
+    const url = new URL(databaseUrl);
+    const sslmode = (url.searchParams.get("sslmode") || "").toLowerCase();
+
+    if (["prefer", "require", "verify-ca"].includes(sslmode)) {
+      // Explicitly pin to verify-full to match current pg behavior and silence warnings.
+      url.searchParams.set("sslmode", "verify-full");
+      return url.toString();
+    }
+
+    return url.toString();
+  } catch {
+    return databaseUrl;
+  }
+}
+
 export const config = {
   port: Number(process.env.PORT || 5000),
   jwtSecret: process.env.JWT_SECRET || "dev_secret_change_me",
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || "dev_secret_change_me",
   clientOrigin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
-  databaseUrl: normalizedDatabaseUrl,
-  databaseEnvCandidates
+  databaseUrl: normalizeSslMode(normalizedDatabaseUrl),
+  databaseEnvCandidates,
+  clearSportsBaseUrl: process.env.CLEARSPORTS_BASE_URL || "https://api.clearsports.dev",
+  clearSportsApiKey: process.env.CLEARSPORTS_API_KEY || "",
+  clearSportsFootballGamesPath: process.env.CLEARSPORTS_FOOTBALL_GAMES_PATH || "/v1/football/games",
+  clearSportsOddsPath: process.env.CLEARSPORTS_ODDS_PATH || "/v1/odds",
+  oddsApiBaseUrl: process.env.ODDS_API_BASE_URL || "https://api.odds-api.io/v1",
+  oddsApiKey: process.env.ODDS_API_KEY || "",
+  oddsApiFootballEventsPath: process.env.ODDS_API_FOOTBALL_EVENTS_PATH || "/events",
+  oddsApiOddsPath: process.env.ODDS_API_ODDS_PATH || "/odds",
+  footballLeague: process.env.FOOTBALL_LEAGUE || "epl"
 };
