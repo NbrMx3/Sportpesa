@@ -19,6 +19,14 @@ app.use(cors({ origin: config.clientOrigin }));
 app.use(express.json());
 app.use(morgan("dev"));
 
+app.get("/", (req, res) => {
+  return res.json({
+    status: "ok",
+    service: "Sportpesa API",
+    health: "/api/health"
+  });
+});
+
 app.get("/api/health", (req, res) => {
   return res.json({ status: "ok", now: new Date().toISOString() });
 });

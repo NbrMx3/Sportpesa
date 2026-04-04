@@ -1,0 +1,9 @@
+{
+  "name": "sportpesa-root",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "postinstall": "npm install --prefix server",
+    "start": "npm run start --prefix server"
+  }
+}
