@@ -1,0 +1,76 @@
+# Sportpesa Server API
+
+This backend implements the core modules of a betting platform:
+
+1. Authentication (signup/login, bcrypt, JWT)
+2. User account (profile, balance, transactions)
+3. Wallet/payment (deposit, withdraw, M-Pesa-style deposit flow)
+4. Match and odds (match feed and odds APIs)
+5. Betting engine (bet slip, locked odds, potential win calculation)
+6. Live betting (Socket.io real-time odds updates)
+7. Result processing (settle bets as won/lost)
+8. Payouts (credit winners)
+9. Admin APIs (users, bets, fraud signals, odds adjustments)
+
+## Quick start
+
+1. Install dependencies:
+
+```bash
+cd server
+npm install
+```
+
+2. Copy environment values:
+
+```bash
+copy .env.example .env
+```
+
+3. Run in development mode:
+
+```bash
+npm run dev
+```
+
+Server base URL: `http://localhost:5000`
+
+Health check: `GET /api/health`
+
+## Default admin login
+
+- Email: `admin@sportpesa.local`
+- Password: `Admin123!`
+
+## Example betting formula
+
+Potential win is calculated as:
+
+`Bet Amount x Combined Odds = Potential Win`
+
+Example: `100 KES x 2.5 = 250 KES`
+
+## Main API endpoints
+
+- `POST /api/auth/signup`
+- `POST /api/auth/login`
+- `GET /api/users/me`
+- `GET /api/users/me/transactions`
+- `POST /api/wallet/deposit`
+- `POST /api/wallet/withdraw`
+- `GET /api/matches`
+- `GET /api/odds`
+- `PATCH /api/matches/:matchId/odds` (admin)
+- `POST /api/bets`
+- `GET /api/bets/my`
+- `POST /api/results` (admin)
+- `POST /api/payouts/:betId`
+- `GET /api/payouts`
+- `GET /api/admin/users` (admin)
+- `GET /api/admin/bets` (admin)
+- `GET /api/admin/fraud-signals` (admin)
+
+## Socket.io events
+
+- `odds:snapshot` (on connect)
+- `odds:update` (every 10 seconds)
