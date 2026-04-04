@@ -7,7 +7,9 @@ import { startLiveOdds } from "./socket/liveOdds.js";
 
 async function startServer() {
   if (!config.databaseUrl) {
-    throw new Error("DATABASE_URL is missing. Set it in your environment.");
+    throw new Error(
+      `Database URL missing. Set one of: ${config.databaseEnvCandidates.join(", ")}`
+    );
   }
 
   await initDatabase();
