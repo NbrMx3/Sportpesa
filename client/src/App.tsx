@@ -62,6 +62,7 @@ function App() {
 	const [phoneNumber, setPhoneNumber] = useState("");
 	const [accessToken, setAccessToken] = useState("");
 	const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+	const [apiOnline, setApiOnline] = useState(true);
 
 	useEffect(() => {
 		const savedToken = localStorage.getItem("sportpesa_access_token") || "";
@@ -83,9 +84,23 @@ function App() {
 	useEffect(() => {
 		let mounted = true;
 
+		async function checkApiOnline() {
+			try {
+				const response = await fetch(`${API_BASE}/health`);
+				if (mounted) {
+					setApiOnline(response.ok);
+				}
+			} catch {
+				if (mounted) {
+					setApiOnline(false);
+				}
+			}
+		}
+
 		async function loadMatches() {
 			try {
 				setLoading(true);
+				await checkApiOnline();
 				const footballResponse = await fetch(`${API_BASE}/football/matches`);
 				const footballData = await footballResponse.json();
 
@@ -118,6 +133,7 @@ function App() {
 					}
 				} catch {
 					if (mounted) {
+						setApiOnline(false);
 						setError("Unable to fetch football matches. Ensure API is running on port 5000.");
 					}
 				}
@@ -138,12 +154,22 @@ function App() {
 	useEffect(() => {
 		let mounted = true;
 
+		if (!apiOnline) {
+			setLiveStatus("API offline. Start server on port 5000");
+			return () => {
+				mounted = false;
+			};
+		}
+
 		async function refreshFootballOdds() {
 			try {
 				const response = await fetch(`${API_BASE}/football/odds`);
 				const data = await response.json();
 
 				if (!response.ok) {
+					if (response.status === 502) {
+						setLiveStatus("Backend unavailable (502). Start API server.");
+					}
 					return;
 				}
 
@@ -185,7 +211,7 @@ function App() {
 
 				setLiveStatus(data.source === "internal-fallback" ? "Fallback odds updates" : "Live football odds updating");
 			} catch {
-				// Keep existing odds if polling fails.
+				setLiveStatus("Unable to reach odds feed");
 			}
 		}
 
@@ -213,12 +239,16 @@ function App() {
 			setLiveStatus("Live odds updating");
 		});
 
+		socket.on("connect_error", () => {
+			setLiveStatus("Live socket unavailable");
+		});
+
 		return () => {
 			mounted = false;
 			window.clearInterval(pollId);
 			socket.disconnect();
 		};
-	}, []);
+	}, [apiOnline]);
 
 	const betslip = useMemo(() => Object.values(activeSelection), [activeSelection]);
 
