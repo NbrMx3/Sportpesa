@@ -41,6 +41,16 @@ Server base URL: `http://localhost:5000`
 
 Health check: `GET /api/health`
 
+## Render deployment
+
+If deploying on Render, set these Environment Variables in the Web Service:
+
+- `DATABASE_URL` (preferred), or one of: `POSTGRES_URL`, `POSTGRESQL_URL`, `NEON_DATABASE_URL`
+- `JWT_SECRET`
+- `CLIENT_ORIGIN` (your Vercel frontend URL)
+
+If `DATABASE_URL` is missing, startup will fail by design to prevent running without a database.
+
 ## Default admin login
 
 - Email: `admin@sportpesa.local`
