@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { config } from "../config.js";
-import { sanitizeUser, store } from "../data/store.js";
+import { mapUser, query } from "../data/db.js";
 
 const router = express.Router();
 
@@ -12,58 +12,70 @@ function signToken(user) {
 }
 
 router.post("/signup", async (req, res) => {
-  const { fullName, email, password } = req.body;
+  try {
+    const { fullName, email, password } = req.body;
 
-  if (!fullName || !email || !password) {
-    return res.status(400).json({ error: "fullName, email and password are required" });
+    if (!fullName || !email || !password) {
+      return res.status(400).json({ error: "fullName, email and password are required" });
+    }
+
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const existingUser = await query("SELECT id FROM users WHERE email = $1", [normalizedEmail]);
+
+    if (existingUser.rowCount) {
+      return res.status(409).json({ error: "Email already in use" });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const userId = uuidv4();
+
+    const inserted = await query(
+      `INSERT INTO users (id, full_name, email, password_hash, role, balance)
+       VALUES ($1, $2, $3, $4, 'user', 0)
+       RETURNING id, full_name, email, role, balance, created_at`,
+      [userId, String(fullName).trim(), normalizedEmail, passwordHash]
+    );
+
+    const user = mapUser(inserted.rows[0]);
+    const token = signToken(user);
+    return res.status(201).json({ user, token });
+  } catch {
+    return res.status(500).json({ error: "Failed to signup" });
   }
-
-  const normalizedEmail = String(email).toLowerCase().trim();
-  const existingUser = store.users.find((user) => user.email === normalizedEmail);
-
-  if (existingUser) {
-    return res.status(409).json({ error: "Email already in use" });
-  }
-
-  const passwordHash = await bcrypt.hash(password, 10);
-  const user = {
-    id: uuidv4(),
-    fullName: String(fullName).trim(),
-    email: normalizedEmail,
-    passwordHash,
-    role: "user",
-    balance: 0,
-    createdAt: new Date().toISOString()
-  };
-
-  store.users.push(user);
-
-  const token = signToken(user);
-  return res.status(201).json({ user: sanitizeUser(user), token });
 });
 
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ error: "email and password are required" });
+    if (!email || !password) {
+      return res.status(400).json({ error: "email and password are required" });
+    }
+
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const result = await query(
+      `SELECT id, full_name, email, role, balance, created_at, password_hash
+       FROM users WHERE email = $1`,
+      [normalizedEmail]
+    );
+    const user = result.rows[0];
+
+    if (!user) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const passwordMatches = await bcrypt.compare(password, user.password_hash);
+
+    if (!passwordMatches) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const safeUser = mapUser(user);
+    const token = signToken(safeUser);
+    return res.json({ user: safeUser, token });
+  } catch {
+    return res.status(500).json({ error: "Failed to login" });
   }
-
-  const normalizedEmail = String(email).toLowerCase().trim();
-  const user = store.users.find((item) => item.email === normalizedEmail);
-
-  if (!user) {
-    return res.status(401).json({ error: "Invalid credentials" });
-  }
-
-  const passwordMatches = await bcrypt.compare(password, user.passwordHash);
-
-  if (!passwordMatches) {
-    return res.status(401).json({ error: "Invalid credentials" });
-  }
-
-  const token = signToken(user);
-  return res.json({ user: sanitizeUser(user), token });
 });
 
 export default router;

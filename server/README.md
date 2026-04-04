@@ -12,6 +12,8 @@ This backend implements the core modules of a betting platform:
 8. Payouts (credit winners)
 9. Admin APIs (users, bets, fraud signals, odds adjustments)
 
+Data persistence is powered by PostgreSQL (Neon compatible) using `pg`.
+
 ## Quick start
 
 1. Install dependencies:
@@ -27,7 +29,9 @@ npm install
 copy .env.example .env
 ```
 
-3. Run in development mode:
+3. Set `DATABASE_URL` in `.env` to your Neon/PostgreSQL connection string.
+
+4. Run in development mode:
 
 ```bash
 npm run dev

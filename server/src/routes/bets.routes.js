@@ -1,14 +1,14 @@
 import express from "express";
 import { v4 as uuidv4 } from "uuid";
 import { requireAuth } from "../middleware/auth.js";
-import { findUserById, store } from "../data/store.js";
+import { pool, query } from "../data/db.js";
 import { computeCombinedOdds, roundTo2 } from "../utils/betting.js";
 
 const router = express.Router();
 
 const allowedOutcomes = new Set(["home", "draw", "away"]);
 
-router.post("/bets", requireAuth, (req, res) => {
+router.post("/bets", requireAuth, async (req, res) => {
   const { stake, selections } = req.body;
   const parsedStake = Number(stake);
 
@@ -20,77 +20,143 @@ router.post("/bets", requireAuth, (req, res) => {
     return res.status(400).json({ error: "At least one selection is required" });
   }
 
-  const user = findUserById(req.user.id);
+  const client = await pool.connect();
 
-  if (user.balance < parsedStake) {
-    return res.status(400).json({ error: "Insufficient balance" });
-  }
+  try {
+    await client.query("BEGIN");
 
-  const lockedSelections = [];
+    const userResult = await client.query("SELECT balance FROM users WHERE id = $1 FOR UPDATE", [
+      req.user.id
+    ]);
+    const currentBalance = Number(userResult.rows[0].balance);
 
-  for (const selection of selections) {
-    const match = store.matches.find((item) => item.id === selection.matchId);
-
-    if (!match) {
-      return res.status(404).json({ error: `Match not found: ${selection.matchId}` });
+    if (currentBalance < parsedStake) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "Insufficient balance" });
     }
 
-    if (!allowedOutcomes.has(selection.predictedOutcome)) {
-      return res.status(400).json({ error: `Invalid outcome: ${selection.predictedOutcome}` });
+    const lockedSelections = [];
+
+    for (const selection of selections) {
+      if (!allowedOutcomes.has(selection.predictedOutcome)) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: `Invalid outcome: ${selection.predictedOutcome}` });
+      }
+
+      const matchResult = await client.query(
+        `SELECT id, home_team, away_team, odds_home, odds_draw, odds_away
+         FROM matches WHERE id = $1`,
+        [selection.matchId]
+      );
+
+      if (!matchResult.rowCount) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ error: `Match not found: ${selection.matchId}` });
+      }
+
+      const match = matchResult.rows[0];
+      const oddsMap = {
+        home: Number(match.odds_home),
+        draw: Number(match.odds_draw),
+        away: Number(match.odds_away)
+      };
+
+      lockedSelections.push({
+        matchId: match.id,
+        homeTeam: match.home_team,
+        awayTeam: match.away_team,
+        predictedOutcome: selection.predictedOutcome,
+        lockedOdd: oddsMap[selection.predictedOutcome]
+      });
     }
 
-    lockedSelections.push({
-      matchId: match.id,
-      homeTeam: match.homeTeam,
-      awayTeam: match.awayTeam,
-      predictedOutcome: selection.predictedOutcome,
-      lockedOdd: match.odds[selection.predictedOutcome]
+    const combinedOdds = computeCombinedOdds(lockedSelections);
+    const potentialWin = roundTo2(parsedStake * combinedOdds);
+    const betId = uuidv4();
+    const createdAt = new Date().toISOString();
+
+    await client.query("UPDATE users SET balance = balance - $1 WHERE id = $2", [
+      parsedStake,
+      req.user.id
+    ]);
+
+    await client.query(
+      `INSERT INTO bets
+      (id, user_id, stake, combined_odds, potential_win, selections, status, paid_out, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'pending', false, $7)`,
+      [
+        betId,
+        req.user.id,
+        parsedStake,
+        combinedOdds,
+        potentialWin,
+        JSON.stringify(lockedSelections),
+        createdAt
+      ]
+    );
+
+    await client.query(
+      `INSERT INTO transactions (id, user_id, type, status, amount, reference, created_at)
+       VALUES ($1, $2, 'bet_stake', 'completed', $3, $4, $5)`,
+      [uuidv4(), req.user.id, parsedStake, betId, createdAt]
+    );
+
+    const balanceResult = await client.query("SELECT balance FROM users WHERE id = $1", [req.user.id]);
+
+    await client.query("COMMIT");
+
+    const bet = {
+      id: betId,
+      userId: req.user.id,
+      stake: parsedStake,
+      combinedOdds,
+      potentialWin,
+      selections: lockedSelections,
+      status: "pending",
+      paidOut: false,
+      createdAt
+    };
+
+    return res.status(201).json({
+      message: "Bet placed successfully",
+      formula: "Bet Amount x Odds = Potential Win",
+      bet,
+      balance: Number(balanceResult.rows[0].balance)
     });
+  } catch {
+    await client.query("ROLLBACK");
+    return res.status(500).json({ error: "Failed to place bet" });
+  } finally {
+    client.release();
   }
-
-  const combinedOdds = computeCombinedOdds(lockedSelections);
-  const potentialWin = roundTo2(parsedStake * combinedOdds);
-
-  user.balance -= parsedStake;
-
-  const bet = {
-    id: uuidv4(),
-    userId: user.id,
-    stake: parsedStake,
-    combinedOdds,
-    potentialWin,
-    selections: lockedSelections,
-    status: "pending",
-    paidOut: false,
-    createdAt: new Date().toISOString()
-  };
-
-  store.bets.push(bet);
-
-  store.transactions.push({
-    id: uuidv4(),
-    userId: user.id,
-    type: "bet_stake",
-    amount: parsedStake,
-    status: "completed",
-    reference: bet.id,
-    createdAt: new Date().toISOString()
-  });
-
-  return res.status(201).json({
-    message: "Bet placed successfully",
-    formula: "Bet Amount x Odds = Potential Win",
-    bet,
-    balance: user.balance
-  });
 });
 
-router.get("/bets/my", requireAuth, (req, res) => {
-  const bets = store.bets
-    .filter((bet) => bet.userId === req.user.id)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+router.get("/bets/my", requireAuth, async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT id, user_id, stake, combined_odds, potential_win, selections, status, paid_out, created_at
+       FROM bets
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [req.user.id]
+    );
 
-  return res.json({ bets });
+    const bets = result.rows.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      stake: Number(row.stake),
+      combinedOdds: Number(row.combined_odds),
+      potentialWin: Number(row.potential_win),
+      selections: row.selections,
+      status: row.status,
+      paidOut: row.paid_out,
+      createdAt: row.created_at
+    }));
+
+    return res.json({ bets });
+  } catch {
+    return res.status(500).json({ error: "Failed to fetch bets" });
+  }
 });
 
 export default router;
