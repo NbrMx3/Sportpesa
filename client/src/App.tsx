@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { io, type Socket } from "socket.io-client";
 import "./App.css";
 
@@ -22,6 +22,15 @@ type BetSelection = {
 	label: string;
 };
 
+type UserProfile = {
+	id: string;
+	fullName: string;
+	email: string;
+	phoneNumber: string | null;
+	role: string;
+	balance: number;
+};
+
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 const SOCKET_BASE = import.meta.env.VITE_SOCKET_BASE || "";
 
@@ -38,10 +47,38 @@ function formatKickoff(dateString: string) {
 function App() {
 	const [matches, setMatches] = useState<Match[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [authLoading, setAuthLoading] = useState(false);
 	const [activeSelection, setActiveSelection] = useState<Record<string, BetSelection>>({});
 	const [stake, setStake] = useState("100");
 	const [error, setError] = useState("");
 	const [liveStatus, setLiveStatus] = useState("Connecting...");
+	const [authError, setAuthError] = useState("");
+	const [authMessage, setAuthMessage] = useState("");
+	const [authMode, setAuthMode] = useState<"login" | "register">("login");
+	const [identifier, setIdentifier] = useState("");
+	const [password, setPassword] = useState("");
+	const [fullName, setFullName] = useState("");
+	const [email, setEmail] = useState("");
+	const [phoneNumber, setPhoneNumber] = useState("");
+	const [accessToken, setAccessToken] = useState("");
+	const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+
+	useEffect(() => {
+		const savedToken = localStorage.getItem("sportpesa_access_token") || "";
+		const savedUser = localStorage.getItem("sportpesa_user");
+
+		if (savedToken) {
+			setAccessToken(savedToken);
+		}
+
+		if (savedUser) {
+			try {
+				setCurrentUser(JSON.parse(savedUser));
+			} catch {
+				localStorage.removeItem("sportpesa_user");
+			}
+		}
+	}, []);
 
 	useEffect(() => {
 		let mounted = true;
@@ -222,6 +259,105 @@ function App() {
 		});
 	}
 
+	async function handleRegister(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		setAuthLoading(true);
+		setAuthError("");
+		setAuthMessage("");
+
+		try {
+			const response = await fetch(`${API_BASE}/auth/signup`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({
+					fullName,
+					email: email || undefined,
+					phoneNumber: phoneNumber || undefined,
+					password
+				})
+			});
+
+			const data = await response.json();
+
+			if (!response.ok) {
+				throw new Error(data?.error || "Registration failed");
+			}
+
+			const token = data.accessToken || data.token || "";
+			if (token) {
+				setAccessToken(token);
+				localStorage.setItem("sportpesa_access_token", token);
+			}
+
+			if (data.user) {
+				setCurrentUser(data.user);
+				localStorage.setItem("sportpesa_user", JSON.stringify(data.user));
+			}
+
+			setAuthMessage("Registration successful. You are now logged in.");
+			setPassword("");
+		} catch (authRequestError) {
+			setAuthError(authRequestError instanceof Error ? authRequestError.message : "Registration failed");
+		} finally {
+			setAuthLoading(false);
+		}
+	}
+
+	async function handleLogin(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		setAuthLoading(true);
+		setAuthError("");
+		setAuthMessage("");
+
+		try {
+			const response = await fetch(`${API_BASE}/auth/login`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({
+					identifier,
+					password
+				})
+			});
+
+			const data = await response.json();
+
+			if (!response.ok) {
+				throw new Error(data?.error || "Login failed");
+			}
+
+			const token = data.accessToken || data.token || "";
+			if (token) {
+				setAccessToken(token);
+				localStorage.setItem("sportpesa_access_token", token);
+			}
+
+			if (data.user) {
+				setCurrentUser(data.user);
+				localStorage.setItem("sportpesa_user", JSON.stringify(data.user));
+			}
+
+			setAuthMessage("Login successful.");
+			setPassword("");
+		} catch (authRequestError) {
+			setAuthError(authRequestError instanceof Error ? authRequestError.message : "Login failed");
+		} finally {
+			setAuthLoading(false);
+		}
+	}
+
+	function handleLogout() {
+		setAccessToken("");
+		setCurrentUser(null);
+		setAuthMessage("Logged out successfully.");
+		setAuthError("");
+		localStorage.removeItem("sportpesa_access_token");
+		localStorage.removeItem("sportpesa_user");
+	}
+
 	return (
 		<div className="page-shell">
 			<header className="top-header">
@@ -230,8 +366,8 @@ function App() {
 					<span>KENYA</span>
 				</div>
 				<div className="top-actions">
-					<button type="button">Login</button>
-					<button type="button" className="register-btn">Register</button>
+					<button type="button" onClick={() => setAuthMode("login")}>Login</button>
+					<button type="button" className="register-btn" onClick={() => setAuthMode("register")}>Register</button>
 				</div>
 			</header>
 
@@ -312,6 +448,72 @@ function App() {
 
 				<aside className="right-panel">
 					<h3>Betslip</h3>
+
+					<section className="auth-card">
+						<h4>{authMode === "register" ? "Create Account" : "User Login"}</h4>
+
+						{currentUser ? (
+							<div className="auth-user-box">
+								<p>Welcome, <strong>{currentUser.fullName}</strong></p>
+								<p>{currentUser.email}</p>
+								<p>Balance: KES {currentUser.balance.toFixed(2)}</p>
+								<button type="button" onClick={handleLogout}>Logout</button>
+							</div>
+						) : authMode === "register" ? (
+							<form onSubmit={handleRegister} className="auth-form">
+								<input
+									type="text"
+									placeholder="Full name"
+									value={fullName}
+									onChange={(event) => setFullName(event.target.value)}
+									required
+								/>
+								<input
+									type="email"
+									placeholder="Email (optional if phone used)"
+									value={email}
+									onChange={(event) => setEmail(event.target.value)}
+								/>
+								<input
+									type="tel"
+									placeholder="Phone number"
+									value={phoneNumber}
+									onChange={(event) => setPhoneNumber(event.target.value)}
+								/>
+								<input
+									type="password"
+									placeholder="Password"
+									value={password}
+									onChange={(event) => setPassword(event.target.value)}
+									required
+									minLength={6}
+								/>
+								<button type="submit" disabled={authLoading}>{authLoading ? "Creating..." : "Create Account"}</button>
+							</form>
+						) : (
+							<form onSubmit={handleLogin} className="auth-form">
+								<input
+									type="text"
+									placeholder="Email or phone"
+									value={identifier}
+									onChange={(event) => setIdentifier(event.target.value)}
+									required
+								/>
+								<input
+									type="password"
+									placeholder="Password"
+									value={password}
+									onChange={(event) => setPassword(event.target.value)}
+									required
+								/>
+								<button type="submit" disabled={authLoading}>{authLoading ? "Logging in..." : "Login"}</button>
+							</form>
+						)}
+
+						{authError && <p className="error-text">{authError}</p>}
+						{authMessage && <p className="status-text">{authMessage}</p>}
+						{accessToken && <p className="token-state">Authenticated session active</p>}
+					</section>
 
 					{!betslip.length && (
 						<p className="status-text">You have not selected any bet.</p>

@@ -224,6 +224,52 @@ body {
 	text-transform: uppercase;
 }
 
+.auth-card {
+	margin-bottom: 0.9rem;
+	padding: 0.7rem;
+	border: 1px solid #35536d;
+	background: #0f2536;
+}
+
+.auth-card h4 {
+	margin: 0 0 0.6rem;
+	text-transform: uppercase;
+	font-size: 0.9rem;
+}
+
+.auth-form {
+	display: grid;
+	gap: 0.45rem;
+}
+
+.auth-form input {
+	padding: 0.58rem;
+	border: 1px solid #3c5a72;
+	background: #122636;
+	color: var(--text);
+}
+
+.auth-form button,
+.auth-user-box button {
+	padding: 0.6rem;
+	border: 1px solid #2f87c3;
+	background: #138cd0;
+	color: #fff;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.auth-user-box p {
+	margin: 0.28rem 0;
+	color: #d3e6f6;
+}
+
+.token-state {
+	margin-top: 0.45rem;
+	font-size: 0.82rem;
+	color: #8fd8ff;
+}
+
 .betslip-items {
 	display: grid;
 	gap: 0.45rem;
