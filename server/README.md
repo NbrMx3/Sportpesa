@@ -56,6 +56,10 @@ If deploying on Render, set these Environment Variables in the Web Service:
 - `JWT_SECRET`
 - `CLIENT_ORIGIN` (your Vercel frontend URL)
 
+You can set multiple allowed CORS origins using commas:
+
+- `CLIENT_ORIGIN=http://localhost:5173,https://your-app.vercel.app`
+
 If `DATABASE_URL` is missing, startup will fail by design to prevent running without a database.
 
 ## Default admin login
@@ -108,6 +112,15 @@ Configure provider credentials in `.env`:
 - `ODDS_API_KEY`
 
 Optional paths/base URLs are listed in `.env.example`.
+
+## Vercel deployment notes
+
+Root `vercel.json` includes rewrites that proxy:
+
+- `/api/*` -> `https://sportpesa-api.onrender.com/api/*`
+- `/socket.io/*` -> `https://sportpesa-api.onrender.com/socket.io/*`
+
+If your Render API URL is different, update `vercel.json` accordingly.
 
 ## Socket.io events
 

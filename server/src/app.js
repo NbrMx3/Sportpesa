@@ -14,8 +14,24 @@ import adminRoutes from "./routes/admin.routes.js";
 
 export const app = express();
 
+const allowedOrigins = config.clientOrigin
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 app.use(helmet());
-app.use(cors({ origin: config.clientOrigin }));
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Not allowed by CORS"));
+    }
+  })
+);
 app.use(express.json());
 app.use(morgan("dev"));
 
