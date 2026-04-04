@@ -1,0 +1,12 @@
+<svg width="100%" viewBox="0 0 680 690" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect width="680" height="680" fill="#2E2A9B" rx="80" style="fill:rgb(46, 42, 155);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- SportPesa wordmark: "Sport" white, "Pesa" white — all one word, centered -->
+  <!-- "Sport" in white, "Pesa" slightly different weight to match logo feel -->
+  <text x="340" y="390" fill="#FFFFFF" text-anchor="middle" letter-spacing="-2" style="fill:rgb(255, 255, 255);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Trebuchet MS&quot;, &quot;Arial Rounded MT Bold&quot;, Arial, sans-serif;font-size:108px;font-weight:700;text-anchor:middle;dominant-baseline:auto">SportPesa</text>
+</svg>
