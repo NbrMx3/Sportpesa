@@ -29,6 +29,7 @@ const normalizedDatabaseUrl = selectedDatabaseUrl
 export const config = {
   port: Number(process.env.PORT || 5000),
   jwtSecret: process.env.JWT_SECRET || "dev_secret_change_me",
+  jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || "dev_secret_change_me",
   clientOrigin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
   databaseUrl: normalizedDatabaseUrl,
   databaseEnvCandidates

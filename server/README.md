@@ -14,6 +14,13 @@ This backend implements the core modules of a betting platform:
 
 Data persistence is powered by PostgreSQL (Neon compatible) using `pg`.
 
+Authentication supports:
+
+- Signup/login with `email` or `phoneNumber`
+- Password hashing with `bcrypt`
+- JWT access tokens and refresh tokens
+- Refresh and logout token endpoints
+
 ## Quick start
 
 1. Install dependencies:
@@ -68,6 +75,8 @@ Example: `100 KES x 2.5 = 250 KES`
 
 - `POST /api/auth/signup`
 - `POST /api/auth/login`
+- `POST /api/auth/refresh`
+- `POST /api/auth/logout`
 - `GET /api/users/me`
 - `GET /api/users/me/transactions`
 - `POST /api/wallet/deposit`

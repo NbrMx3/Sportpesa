@@ -7,38 +7,82 @@ import { mapUser, query } from "../data/db.js";
 
 const router = express.Router();
 
-function signToken(user) {
+function signAccessToken(user) {
   return jwt.sign({ sub: user.id, role: user.role }, config.jwtSecret, { expiresIn: "8h" });
+}
+
+function signRefreshToken(tokenId, userId) {
+  return jwt.sign({ sub: userId, tid: tokenId }, config.jwtRefreshSecret, { expiresIn: "7d" });
+}
+
+function normalizePhone(phoneNumber) {
+  if (!phoneNumber) return null;
+  return String(phoneNumber).replace(/\s+/g, "").trim();
 }
 
 router.post("/signup", async (req, res) => {
   try {
-    const { fullName, email, password } = req.body;
+    const { fullName, email, phoneNumber, password } = req.body;
 
-    if (!fullName || !email || !password) {
-      return res.status(400).json({ error: "fullName, email and password are required" });
+    if (!fullName || !password) {
+      return res.status(400).json({ error: "fullName and password are required" });
     }
 
-    const normalizedEmail = String(email).toLowerCase().trim();
-    const existingUser = await query("SELECT id FROM users WHERE email = $1", [normalizedEmail]);
+    if (String(password).length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters" });
+    }
 
-    if (existingUser.rowCount) {
-      return res.status(409).json({ error: "Email already in use" });
+    if (!email && !phoneNumber) {
+      return res.status(400).json({ error: "email or phoneNumber is required" });
+    }
+
+    const normalizedEmail = email ? String(email).toLowerCase().trim() : null;
+    const normalizedPhone = normalizePhone(phoneNumber);
+
+    if (normalizedEmail) {
+      const existingByEmail = await query("SELECT id FROM users WHERE email = $1", [normalizedEmail]);
+      if (existingByEmail.rowCount) {
+        return res.status(409).json({ error: "Email already in use" });
+      }
+    }
+
+    if (normalizedPhone) {
+      const existingByPhone = await query("SELECT id FROM users WHERE phone_number = $1", [
+        normalizedPhone
+      ]);
+      if (existingByPhone.rowCount) {
+        return res.status(409).json({ error: "Phone number already in use" });
+      }
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
     const userId = uuidv4();
 
     const inserted = await query(
-      `INSERT INTO users (id, full_name, email, password_hash, role, balance)
-       VALUES ($1, $2, $3, $4, 'user', 0)
-       RETURNING id, full_name, email, role, balance, created_at`,
-      [userId, String(fullName).trim(), normalizedEmail, passwordHash]
+      `INSERT INTO users (id, full_name, email, phone_number, password_hash, role, balance)
+       VALUES ($1, $2, $3, $4, $5, 'user', 0)
+       RETURNING id, full_name, email, phone_number, role, balance, created_at`,
+      [
+        userId,
+        String(fullName).trim(),
+        normalizedEmail || `${userId}@phone.local`,
+        normalizedPhone,
+        passwordHash
+      ]
     );
 
     const user = mapUser(inserted.rows[0]);
-    const token = signToken(user);
-    return res.status(201).json({ user, token });
+    const accessToken = signAccessToken(user);
+    const refreshTokenId = uuidv4();
+    const refreshToken = signRefreshToken(refreshTokenId, user.id);
+
+    await query(
+      `INSERT INTO refresh_tokens (id, user_id, token, expires_at)
+       VALUES ($1, $2, $3, NOW() + INTERVAL '7 days')`,
+      [refreshTokenId, user.id, refreshToken]
+    );
+
+    return res.status(201).json({ user, token: accessToken, accessToken, refreshToken });
   } catch {
     return res.status(500).json({ error: "Failed to signup" });
   }
@@ -46,17 +90,23 @@ router.post("/signup", async (req, res) => {
 
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, phoneNumber, identifier, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "email and password are required" });
+    const incomingIdentifier = identifier || email || phoneNumber;
+
+    if (!incomingIdentifier || !password) {
+      return res.status(400).json({ error: "identifier (email/phoneNumber) and password are required" });
     }
 
-    const normalizedEmail = String(email).toLowerCase().trim();
+    const rawIdentifier = String(incomingIdentifier).trim();
+    const isEmail = rawIdentifier.includes("@");
+    const normalizedIdentifier = isEmail ? rawIdentifier.toLowerCase() : normalizePhone(rawIdentifier);
+
     const result = await query(
-      `SELECT id, full_name, email, role, balance, created_at, password_hash
-       FROM users WHERE email = $1`,
-      [normalizedEmail]
+      `SELECT id, full_name, email, phone_number, role, balance, created_at, password_hash
+       FROM users
+       WHERE ${isEmail ? "email" : "phone_number"} = $1`,
+      [normalizedIdentifier]
     );
     const user = result.rows[0];
 
@@ -71,10 +121,78 @@ router.post("/login", async (req, res) => {
     }
 
     const safeUser = mapUser(user);
-    const token = signToken(safeUser);
-    return res.json({ user: safeUser, token });
+    const accessToken = signAccessToken(safeUser);
+    const refreshTokenId = uuidv4();
+    const refreshToken = signRefreshToken(refreshTokenId, safeUser.id);
+
+    await query(
+      `INSERT INTO refresh_tokens (id, user_id, token, expires_at)
+       VALUES ($1, $2, $3, NOW() + INTERVAL '7 days')`,
+      [refreshTokenId, safeUser.id, refreshToken]
+    );
+
+    return res.json({ user: safeUser, token: accessToken, accessToken, refreshToken });
   } catch {
     return res.status(500).json({ error: "Failed to login" });
+  }
+});
+
+router.post("/refresh", async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({ error: "refreshToken is required" });
+    }
+
+    const payload = jwt.verify(refreshToken, config.jwtRefreshSecret);
+    const stored = await query(
+      `SELECT id, user_id, token, revoked, expires_at
+       FROM refresh_tokens
+       WHERE id = $1 AND user_id = $2`,
+      [payload.tid, payload.sub]
+    );
+
+    const storedToken = stored.rows[0];
+    if (!storedToken || storedToken.revoked || storedToken.token !== refreshToken) {
+      return res.status(401).json({ error: "Invalid refresh token" });
+    }
+
+    const userResult = await query(
+      `SELECT id, full_name, email, phone_number, role, balance, created_at
+       FROM users
+       WHERE id = $1`,
+      [payload.sub]
+    );
+
+    if (!userResult.rowCount) {
+      return res.status(401).json({ error: "User not found" });
+    }
+
+    const user = mapUser(userResult.rows[0]);
+    const accessToken = signAccessToken(user);
+    return res.json({ token: accessToken, accessToken });
+  } catch {
+    return res.status(401).json({ error: "Invalid or expired refresh token" });
+  }
+});
+
+router.post("/logout", async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return res.status(400).json({ error: "refreshToken is required" });
+    }
+
+    const payload = jwt.verify(refreshToken, config.jwtRefreshSecret);
+    await query("UPDATE refresh_tokens SET revoked = TRUE WHERE id = $1 AND user_id = $2", [
+      payload.tid,
+      payload.sub
+    ]);
+
+    return res.json({ message: "Logged out successfully" });
+  } catch {
+    return res.status(200).json({ message: "Logged out" });
   }
 });
 

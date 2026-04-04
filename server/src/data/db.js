@@ -19,6 +19,7 @@ export function mapUser(row) {
     id: row.id,
     fullName: row.full_name,
     email: row.email,
+    phoneNumber: row.phone_number,
     role: row.role,
     balance: Number(row.balance),
     createdAt: row.created_at
@@ -62,9 +63,32 @@ export async function initDatabase() {
       id TEXT PRIMARY KEY,
       full_name TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
+      phone_number TEXT,
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'user',
       balance NUMERIC(12, 2) NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS phone_number TEXT;
+  `);
+
+  await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS users_phone_number_unique
+    ON users (phone_number)
+    WHERE phone_number IS NOT NULL;
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS refresh_tokens (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      token TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      revoked BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `);
