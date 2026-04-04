@@ -22,8 +22,8 @@ type BetSelection = {
 	label: string;
 };
 
-const API_BASE = "http://localhost:5000/api";
-const SOCKET_BASE = "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
+const SOCKET_BASE = import.meta.env.VITE_SOCKET_BASE || "http://localhost:5000";
 
 function formatKickoff(dateString: string) {
 	const date = new Date(dateString);
@@ -184,7 +184,7 @@ function App() {
 
 				<section className="center-panel">
 					<div className="hero-banner">
-						<img src="/favicon.svg" alt="SportPesa" />
+						<img src="/sportpesa_logo_blue.svg" alt="SportPesa" />
 						<div>
 							<p>Football Betting Odds</p>
 							<strong>{liveStatus}</strong>
