@@ -2,13 +2,14 @@
   "installCommand": "cd client && npm install",
   "buildCommand": "cd client && npm run build",
   "outputDirectory": "client/dist",
-  "routes": [
+  "rewrites": [
     {
-      "handle": "filesystem"
+      "source": "/favicon.ico",
+      "destination": "/sportpesa_logo_blue.svg"
     },
     {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
