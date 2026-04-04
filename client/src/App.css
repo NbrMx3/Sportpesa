@@ -1,13 +1,14 @@
 :root {
-	--bg: #0b1827;
-	--bg-deep: #06101c;
-	--panel: #102437;
-	--panel-soft: #173249;
-	--line: #2e455c;
-	--text: #e8f0f8;
-	--muted: #9cb0c2;
-	--brand: #00a4ff;
-	--accent: #ff9f1c;
+	--bg: #121f2e;
+	--bg-deep: #0e1a27;
+	--panel: #172b3d;
+	--panel-soft: #1f3a4f;
+	--line: #29455d;
+	--text: #edf4fa;
+	--muted: #99b0c2;
+	--brand: #0a91de;
+	--brand-2: #16618b;
+	--accent: #ff9a1f;
 }
 
 * {
@@ -16,39 +17,42 @@
 
 body {
 	margin: 0;
-	background:
-		radial-gradient(circle at 80% -30%, #1d4f7a 0%, transparent 40%),
-		radial-gradient(circle at 0% 100%, #123a58 0%, transparent 35%),
-		linear-gradient(140deg, var(--bg), var(--bg-deep));
+	background: linear-gradient(180deg, var(--bg), var(--bg-deep));
 	color: var(--text);
-	font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+	font-family: "Segoe UI", Tahoma, sans-serif;
 }
 
 .page-shell {
 	min-height: 100vh;
+	max-width: 1580px;
+	margin: 0 auto;
+	box-shadow: 0 0 0 1px #0d1721;
 }
 
 .top-header {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 0.9rem 1rem;
-	background: #03101d;
-	border-bottom: 1px solid #203549;
+	padding: 0.85rem 0.95rem;
+	background: #031324;
+	border-bottom: 1px solid #1f3347;
 }
 
 .brand-block h1 {
 	margin: 0;
-	font-size: 2rem;
+	font-size: 3rem;
+	line-height: 0.95;
 	letter-spacing: 0.5px;
+	font-weight: 900;
 }
 
 .brand-block span {
 	display: inline-block;
 	margin-top: 0.25rem;
-	font-size: 0.75rem;
-	padding: 0.15rem 0.4rem;
-	background: #0d4e87;
+	font-size: 1.35rem;
+	padding: 0.14rem 0.42rem;
+	background: #1164a1;
+	font-weight: 700;
 }
 
 .top-actions {
@@ -57,86 +61,97 @@ body {
 }
 
 .top-actions button {
-	border: 1px solid #31506a;
-	background: #0b1f2f;
+	border: 1px solid #2d4a62;
+	background: #102538;
 	color: var(--text);
-	padding: 0.6rem 1rem;
+	padding: 0.58rem 0.96rem;
 	text-transform: uppercase;
-	font-weight: 700;
+	font-weight: 800;
 	cursor: pointer;
+	font-size: 0.87rem;
 }
 
 .top-actions .register-btn {
-	background: var(--brand);
-	border-color: var(--brand);
+	background: #0f9df0;
+	border-color: #0f9df0;
 	color: #fff;
 }
 
 .main-nav {
 	display: flex;
 	gap: 1rem;
-	background: #142738;
-	border-bottom: 1px solid var(--line);
-	padding: 0.8rem 1rem;
+	background: #1e3548;
+	border-bottom: 1px solid #335067;
+	padding: 0.72rem 0.95rem;
 	overflow-x: auto;
 }
 
 .main-nav a {
 	color: var(--text);
 	text-decoration: none;
-	font-weight: 700;
+	font-weight: 800;
 	white-space: nowrap;
+	opacity: 0.95;
 }
 
 .content-grid {
 	display: grid;
-	grid-template-columns: 230px 1fr 370px;
-	gap: 0.75rem;
-	padding: 0.75rem;
+	grid-template-columns: 235px 1fr 420px;
+	gap: 0.62rem;
+	padding: 0.62rem;
 }
 
 .left-panel,
 .right-panel,
 .center-panel {
 	background: var(--panel);
-	border: 1px solid var(--line);
+	border: 1px solid #27445b;
 }
 
 .left-panel {
-	padding: 0.75rem;
+	padding: 0;
 }
 
 .left-panel h3,
 .left-panel h4 {
-	margin: 0 0 0.45rem;
+	margin: 0;
+	padding: 0.78rem 0.72rem;
+	background: #114961;
+	text-transform: uppercase;
+	font-size: 1.06rem;
 }
 
 .left-panel ul {
 	list-style: none;
-	margin: 0 0 1rem;
+	margin: 0;
 	padding: 0;
 }
 
 .left-panel li {
-	padding: 0.55rem 0.35rem;
-	border-bottom: 1px solid #24435a;
+	padding: 0.8rem 0.72rem;
+	border-bottom: 1px solid #22506a;
 	font-weight: 700;
-	color: var(--muted);
+	font-size: 1.14rem;
+	color: #c8dae8;
+}
+
+.left-panel li:first-child {
+	background: #29566d;
 }
 
 .center-panel {
-	padding: 0.7rem;
+	padding: 0.52rem;
 }
 
 .hero-banner {
 	display: flex;
 	align-items: center;
 	gap: 1rem;
-	background: linear-gradient(100deg, #0c2538, #154566);
-	border: 1px solid #2b506b;
-	border-radius: 8px;
-	padding: 0.7rem 1rem;
-	margin-bottom: 0.8rem;
+	background: linear-gradient(110deg, #193a53, #2c5c7a);
+	border: 1px solid #355a75;
+	border-radius: 7px;
+	padding: 0.65rem 0.9rem;
+	margin-bottom: 0.58rem;
 }
 
 .hero-banner img {
@@ -146,7 +161,7 @@ body {
 
 .hero-banner p {
 	margin: 0;
-	font-size: 1.1rem;
+	font-size: 1.32rem;
 	font-weight: 800;
 	text-transform: uppercase;
 }
@@ -156,79 +171,86 @@ body {
 }
 
 .odds-table {
-	border: 1px solid #29445a;
+	border: 1px solid #264b64;
+	background: #152c3f;
 }
 
 .odds-head,
 .odds-row {
 	display: grid;
-	grid-template-columns: minmax(220px, 1fr) 95px 95px 95px;
+	grid-template-columns: minmax(250px, 1fr) 102px 102px 102px;
 }
 
 .odds-head {
-	background: #081828;
+	background: #041729;
 	font-weight: 800;
 	text-transform: uppercase;
-	font-size: 0.8rem;
-	color: #84c1eb;
+	font-size: 0.9rem;
+	color: #89c0df;
 }
 
 .odds-head span {
-	padding: 0.7rem;
-	border-right: 1px solid #204059;
+	padding: 0.82rem;
+	border-right: 1px solid #23536f;
 }
 
 .fixture-cell {
-	padding: 0.7rem;
-	border-top: 1px solid #25455d;
+	padding: 0.82rem;
+	border-top: 1px solid #234963;
 	display: flex;
 	flex-direction: column;
-	gap: 0.2rem;
+	gap: 0.32rem;
+	background: #152d40;
 }
 
 .fixture-cell small {
-	color: var(--muted);
+	color: #91afc2;
+	font-size: 0.84rem;
 }
 
 .fixture-cell strong {
-	font-size: 1.05rem;
+	font-size: 1.34rem;
+	line-height: 1;
 }
 
 .odd-btn {
-	border: 1px solid #39526b;
+	border: 1px solid #3b5d77;
 	border-top: none;
-	background: #27465d;
-	color: #d6ecff;
-	font-size: 1.1rem;
+	background: #375a74;
+	color: #f0f7ff;
+	font-size: 1.26rem;
 	font-weight: 800;
 	cursor: pointer;
-	transition: transform 120ms ease, border-color 120ms ease;
+	transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
 }
 
 .odd-btn:hover {
 	transform: translateY(-1px);
+	background: #416a87;
 }
 
 .odd-btn.active {
-	background: #203b50;
+	background: #1f4159;
 	border-color: var(--accent);
-	box-shadow: inset 0 0 0 2px rgba(255, 159, 28, 0.45);
+	box-shadow: inset 0 0 0 2px rgba(255, 154, 31, 0.5);
 }
 
 .right-panel {
-	padding: 0.85rem;
+	padding: 0;
 }
 
 .right-panel h3 {
-	margin: 0 0 0.8rem;
+	margin: 0;
+	padding: 0.8rem 0.9rem;
+	background: #0f4d68;
 	text-transform: uppercase;
 }
 
 .auth-card {
-	margin-bottom: 0.9rem;
-	padding: 0.7rem;
-	border: 1px solid #35536d;
-	background: #0f2536;
+	margin: 0.85rem;
+	padding: 0.72rem;
+	border: 1px solid #31536c;
+	background: #133045;
 }
 
 .auth-card h4 {
@@ -244,16 +266,16 @@ body {
 
 .auth-form input {
 	padding: 0.58rem;
-	border: 1px solid #3c5a72;
-	background: #122636;
+	border: 1px solid #426482;
+	background: #17354c;
 	color: var(--text);
 }
 
 .auth-form button,
 .auth-user-box button {
 	padding: 0.6rem;
-	border: 1px solid #2f87c3;
-	background: #138cd0;
+	border: 1px solid #2a97d6;
+	background: #1192da;
 	color: #fff;
 	font-weight: 700;
 	cursor: pointer;
@@ -273,12 +295,12 @@ body {
 .betslip-items {
 	display: grid;
 	gap: 0.45rem;
-	margin-bottom: 0.65rem;
+	margin: 0 0.85rem 0.65rem;
 }
 
 .betslip-items article {
 	background: var(--panel-soft);
-	border: 1px solid #32526a;
+	border: 1px solid #3b5f79;
 	padding: 0.5rem;
 }
 
@@ -295,17 +317,18 @@ body {
 
 .right-panel label {
 	display: block;
-	margin-top: 0.8rem;
+	margin: 0.8rem 0.85rem 0.35rem;
 	margin-bottom: 0.35rem;
 	color: var(--muted);
 	font-weight: 700;
 }
 
 .right-panel input {
-	width: 100%;
+	width: calc(100% - 1.7rem);
+	margin: 0 0.85rem;
 	padding: 0.7rem;
-	border: 1px solid #3c5a72;
-	background: #122636;
+	border: 1px solid #436684;
+	background: #1a3750;
 	color: var(--text);
 	font-size: 1rem;
 }
@@ -313,16 +336,16 @@ body {
 .calc-row {
 	display: flex;
 	justify-content: space-between;
-	margin-top: 0.6rem;
+	margin: 0.62rem 0.85rem 0;
 	color: #b5c8da;
 }
 
 .place-btn {
-	width: 100%;
-	margin-top: 0.9rem;
+	width: calc(100% - 1.7rem);
+	margin: 0.9rem 0.85rem 0;
 	padding: 0.78rem;
 	border: none;
-	background: #17a3f2;
+	background: #1e9be3;
 	color: #fff;
 	font-size: 1rem;
 	font-weight: 900;
@@ -336,9 +359,9 @@ body {
 }
 
 .care-box {
-	margin-top: 1rem;
-	border: 1px solid #3a556c;
-	background: #233f55;
+	margin: 1rem 0.85rem 0.85rem;
+	border: 1px solid #4d6578;
+	background: #2c4b63;
 	padding: 0.8rem;
 }
 
@@ -354,11 +377,13 @@ body {
 
 .status-text {
 	color: var(--muted);
+	margin: 0.7rem 0.85rem;
 }
 
 .error-text {
-	color: #ff7f9f;
+	color: #ff97ad;
 	font-weight: 700;
+	margin: 0.6rem 0.85rem;
 }
 
 @media (max-width: 1200px) {
@@ -388,6 +413,14 @@ body {
 
 	.odds-head,
 	.odds-row {
-		grid-template-columns: minmax(160px, 1fr) 80px 80px 80px;
+		grid-template-columns: minmax(150px, 1fr) 82px 82px 82px;
+	}
+
+	.brand-block h1 {
+		font-size: 2.25rem;
+	}
+
+	.brand-block span {
+		font-size: 0.92rem;
 	}
 }
