@@ -174,7 +174,7 @@ function App() {
 				} catch {
 					if (mounted) {
 						setApiOnline(false);
-						setError("Unable to fetch football matches. Ensure API is running on port 5000.");
+						setError("Unable to fetch football matches. Ensure API is running on port 5001.");
 					}
 				}
 			} finally {
@@ -195,7 +195,7 @@ function App() {
 		let mounted = true;
 
 		if (!apiOnline) {
-			setLiveStatus("API offline. Start server on port 5000");
+			setLiveStatus("API offline. Start server on port 5001");
 			return () => {
 				mounted = false;
 			};
@@ -486,7 +486,7 @@ function App() {
 
 				<section className="center-panel">
 					<div className="hero-banner">
-						<img src="/sportpesa_logo_blue.svg" alt="SportPesa" />
+						<img src="/sport.svg" alt="SportPesa" />
 						<div>
 							<p>Football Betting Odds</p>
 							<strong>{liveStatus}</strong>

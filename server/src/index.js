@@ -25,6 +25,18 @@ async function startServer() {
 
   startLiveOdds(io);
 
+  server.on("error", (error) => {
+    if (error?.code === "EADDRINUSE") {
+      console.error(
+        `Port ${config.port} is already in use. Stop the other server process or set a different PORT in server/.env.`
+      );
+      process.exit(1);
+    }
+
+    console.error("Server runtime error", error);
+    process.exit(1);
+  });
+
   server.listen(config.port, () => {
     console.log(`Sportpesa API running on port ${config.port}`);
   });

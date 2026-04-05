@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/favicon.ico",
-      "destination": "/sportpesa_logo_blue.svg"
+      "destination": "/sport.svg"
     },
     {
       "source": "/(.*)",
