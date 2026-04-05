@@ -31,6 +31,8 @@ type UserProfile = {
 	balance: number;
 };
 
+type ApiPayload = Record<string, unknown>;
+
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 const SOCKET_BASE = import.meta.env.VITE_SOCKET_BASE || "";
 
@@ -42,6 +44,43 @@ function formatKickoff(dateString: string) {
 		hour: "2-digit",
 		minute: "2-digit"
 	});
+}
+
+async function parseJsonSafely(response: Response): Promise<ApiPayload | null> {
+	const rawBody = await response.text();
+
+	if (!rawBody) {
+		return null;
+	}
+
+	try {
+		const parsed: unknown = JSON.parse(rawBody);
+		return parsed && typeof parsed === "object" ? (parsed as ApiPayload) : null;
+	} catch {
+		return null;
+	}
+}
+
+function getPayloadString(payload: ApiPayload | null, key: string): string {
+	const value = payload?.[key];
+	return typeof value === "string" ? value : "";
+}
+
+function isUserProfile(payload: unknown): payload is UserProfile {
+	if (!payload || typeof payload !== "object") {
+		return false;
+	}
+
+	const candidate = payload as Record<string, unknown>;
+
+	return (
+		typeof candidate.id === "string" &&
+		typeof candidate.fullName === "string" &&
+		typeof candidate.email === "string" &&
+		(candidate.phoneNumber === null || typeof candidate.phoneNumber === "string") &&
+		typeof candidate.role === "string" &&
+		typeof candidate.balance === "number"
+	);
 }
 
 function App() {
@@ -63,6 +102,7 @@ function App() {
 	const [accessToken, setAccessToken] = useState("");
 	const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 	const [apiOnline, setApiOnline] = useState(true);
+	const isLoggedIn = Boolean(accessToken && currentUser);
 
 	useEffect(() => {
 		const savedToken = localStorage.getItem("sportpesa_access_token") || "";
@@ -309,21 +349,22 @@ function App() {
 				})
 			});
 
-			const data = await response.json();
+			const data = await parseJsonSafely(response);
 
 			if (!response.ok) {
-				throw new Error(data?.error || "Registration failed");
+				throw new Error(getPayloadString(data, "error") || `Registration failed (${response.status})`);
 			}
 
-			const token = data.accessToken || data.token || "";
+			const token = getPayloadString(data, "accessToken") || getPayloadString(data, "token");
 			if (token) {
 				setAccessToken(token);
 				localStorage.setItem("sportpesa_access_token", token);
 			}
 
-			if (data.user) {
-				setCurrentUser(data.user);
-				localStorage.setItem("sportpesa_user", JSON.stringify(data.user));
+			const userPayload = data?.user;
+			if (isUserProfile(userPayload)) {
+				setCurrentUser(userPayload);
+				localStorage.setItem("sportpesa_user", JSON.stringify(userPayload));
 			}
 
 			setAuthMessage("Registration successful. You are now logged in.");
@@ -353,21 +394,22 @@ function App() {
 				})
 			});
 
-			const data = await response.json();
+			const data = await parseJsonSafely(response);
 
 			if (!response.ok) {
-				throw new Error(data?.error || "Login failed");
+				throw new Error(getPayloadString(data, "error") || `Login failed (${response.status})`);
 			}
 
-			const token = data.accessToken || data.token || "";
+			const token = getPayloadString(data, "accessToken") || getPayloadString(data, "token");
 			if (token) {
 				setAccessToken(token);
 				localStorage.setItem("sportpesa_access_token", token);
 			}
 
-			if (data.user) {
-				setCurrentUser(data.user);
-				localStorage.setItem("sportpesa_user", JSON.stringify(data.user));
+			const userPayload = data?.user;
+			if (isUserProfile(userPayload)) {
+				setCurrentUser(userPayload);
+				localStorage.setItem("sportpesa_user", JSON.stringify(userPayload));
 			}
 
 			setAuthMessage("Login successful.");
@@ -396,8 +438,20 @@ function App() {
 					<span>KENYA</span>
 				</div>
 				<div className="top-actions">
-					<button type="button" onClick={() => setAuthMode("login")}>Login</button>
-					<button type="button" className="register-btn" onClick={() => setAuthMode("register")}>Register</button>
+					{isLoggedIn ? (
+						<>
+							<div className="session-pill">
+								<span>Signed in</span>
+								<strong>{currentUser?.fullName}</strong>
+							</div>
+							<button type="button" className="logout-btn" onClick={handleLogout}>Logout</button>
+						</>
+					) : (
+						<>
+							<button type="button" onClick={() => setAuthMode("login")}>Login</button>
+							<button type="button" className="register-btn" onClick={() => setAuthMode("register")}>Register</button>
+						</>
+					)}
 				</div>
 			</header>
 
@@ -478,9 +532,20 @@ function App() {
 
 				<aside className="right-panel">
 					<h3>Betslip</h3>
+					<p className={`session-state ${isLoggedIn ? "logged-in" : "logged-out"}`}>
+						{isLoggedIn
+							? `Account ready: ${currentUser?.fullName}`
+							: "Guest mode: login required for wallet and bet placement"}
+					</p>
 
 					<section className="auth-card">
-						<h4>{authMode === "register" ? "Create Account" : "User Login"}</h4>
+						<h4>
+							{isLoggedIn
+								? "My Account"
+								: authMode === "register"
+									? "Create Account"
+									: "User Login"}
+						</h4>
 
 						{currentUser ? (
 							<div className="auth-user-box">
@@ -580,9 +645,11 @@ function App() {
 						<strong>KES {potentialWin || 0}</strong>
 					</div>
 
-					<button type="button" className="place-btn" disabled={!betslip.length}>
+					<button type="button" className="place-btn" disabled={!betslip.length || !isLoggedIn}>
 						Place Bet
 					</button>
+
+					{!isLoggedIn && <p className="status-text">Sign in to place your bet and use wallet actions.</p>}
 
 					<section className="care-box">
 						<h4>Customer Care</h4>

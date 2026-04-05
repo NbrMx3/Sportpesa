@@ -58,6 +58,7 @@ body {
 .top-actions {
 	display: flex;
 	gap: 0.5rem;
+	align-items: center;
 }
 
 .top-actions button {
@@ -75,6 +76,33 @@ body {
 	background: #0f9df0;
 	border-color: #0f9df0;
 	color: #fff;
+}
+
+.top-actions .logout-btn {
+	background: #e45461;
+	border-color: #e45461;
+	color: #fff;
+}
+
+.session-pill {
+	display: flex;
+	flex-direction: column;
+	background: #14324a;
+	border: 1px solid #2f627e;
+	padding: 0.35rem 0.62rem;
+	min-width: 180px;
+}
+
+.session-pill span {
+	font-size: 0.72rem;
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
+	color: #89c0df;
+}
+
+.session-pill strong {
+	font-size: 0.87rem;
+	line-height: 1.1;
 }
 
 .main-nav {
@@ -244,6 +272,26 @@ body {
 	padding: 0.8rem 0.9rem;
 	background: #0f4d68;
 	text-transform: uppercase;
+}
+
+.session-state {
+	margin: 0.7rem 0.85rem 0;
+	padding: 0.58rem 0.62rem;
+	border: 1px solid transparent;
+	font-size: 0.84rem;
+	font-weight: 700;
+}
+
+.session-state.logged-in {
+	color: #85f0bf;
+	background: #173d45;
+	border-color: #266d75;
+}
+
+.session-state.logged-out {
+	color: #f2d48d;
+	background: #3b311f;
+	border-color: #6d5530;
 }
 
 .auth-card {
@@ -422,5 +470,14 @@ body {
 
 	.brand-block span {
 		font-size: 0.92rem;
+	}
+
+	.top-actions {
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+
+	.session-pill {
+		min-width: 145px;
 	}
 }
