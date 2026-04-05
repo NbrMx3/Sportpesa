@@ -62,5 +62,7 @@ export const config = {
   oddsApiKey: process.env.ODDS_API_KEY || "",
   oddsApiFootballEventsPath: process.env.ODDS_API_FOOTBALL_EVENTS_PATH || "/events",
   oddsApiOddsPath: process.env.ODDS_API_ODDS_PATH || "/odds",
-  footballLeague: process.env.FOOTBALL_LEAGUE || "epl"
+  footballLeague: process.env.FOOTBALL_LEAGUE || "epl",
+  footballLeagues: process.env.FOOTBALL_LEAGUES || "",
+  footballMaxMatches: Number(process.env.FOOTBALL_MAX_MATCHES || 120)
 };

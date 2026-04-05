@@ -113,6 +113,18 @@ Configure provider credentials in `.env`:
 
 Optional paths/base URLs are listed in `.env.example`.
 
+To fetch broader same-day fixtures, configure:
+
+- `FOOTBALL_LEAGUES` (comma-separated leagues to query in addition to `FOOTBALL_LEAGUE`)
+- `FOOTBALL_MAX_MATCHES` (maximum number of matches returned)
+
+Both football feed endpoints also accept optional query params:
+
+- `date=YYYY-MM-DD`
+- `from=<ISO timestamp>`
+- `to=<ISO timestamp>`
+- `limit=<number>`
+
 ## Vercel deployment notes
 
 Root `vercel.json` includes rewrites that proxy:
