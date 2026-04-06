@@ -306,6 +306,27 @@ body {
 	font-size: 0.82rem;
 }
 
+.admin-inline-list {
+	display: grid;
+	gap: 0.35rem;
+	max-height: 180px;
+	overflow: auto;
+}
+
+.admin-inline-list button,
+.admin-inline-list span {
+	padding: 0.45rem;
+	border: 1px solid #456981;
+	background: #1a3d55;
+	color: #dff0fb;
+	text-align: left;
+	font-size: 0.8rem;
+}
+
+.admin-inline-list button {
+	cursor: pointer;
+}
+
 .content-grid {
 	display: grid;
 	grid-template-columns: 235px 1fr 420px;

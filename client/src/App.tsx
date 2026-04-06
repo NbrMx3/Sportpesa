@@ -106,6 +106,8 @@ type AdminTransaction = {
 	createdAt: string;
 };
 
+type AdminToolKey = "overview" | "users" | "bets" | "fraud" | "transactions" | "results" | "payouts";
+
 type ApiPayload = Record<string, unknown>;
 
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
@@ -196,6 +198,16 @@ const TOP_NAV_CONTENT: Record<TopNavKey, { heading: string; subtitle: string; ca
 		cards: ["Android app", "Lite web app", "Install guide"]
 	}
 };
+
+const ADMIN_TOOLS: Array<{ key: AdminToolKey; label: string }> = [
+	{ key: "overview", label: "Overview" },
+	{ key: "users", label: "Users" },
+	{ key: "bets", label: "Bets" },
+	{ key: "fraud", label: "Fraud Signals" },
+	{ key: "transactions", label: "Transactions" },
+	{ key: "results", label: "Results" },
+	{ key: "payouts", label: "Payouts" }
+];
 
 const HERO_SLIDES: HeroSlide[] = [
 	{
@@ -445,6 +457,7 @@ function App() {
 	const [adminBets, setAdminBets] = useState<AdminBet[]>([]);
 	const [adminSignals, setAdminSignals] = useState<AdminSignal[]>([]);
 	const [adminTransactions, setAdminTransactions] = useState<AdminTransaction[]>([]);
+	const [activeAdminTool, setActiveAdminTool] = useState<AdminToolKey>("overview");
 	const [adminMatchId, setAdminMatchId] = useState("");
 	const [adminResult, setAdminResult] = useState<Outcome>("home");
 	const [adminPayoutBetId, setAdminPayoutBetId] = useState("");
@@ -456,6 +469,14 @@ function App() {
 	const localFootballMatches = useMemo(() => buildLocalFootballMatches(selectedMonth), [selectedMonth]);
 	const sportsbookView = activeTopNav === "sports" || activeTopNav === "liveGames";
 	const adminView = Boolean(showAdminDashboard && isAdminUser);
+	const wonUnpaidBets = useMemo(
+		() => adminBets.filter((bet) => bet.status === "won" && !bet.paidOut),
+		[adminBets]
+	);
+	const resultCandidateMatches = useMemo(
+		() => matches.filter((match) => match.sport === "Football").slice(0, 25),
+		[matches]
+	);
 
 	useEffect(() => {
 		const savedToken = localStorage.getItem("sportpesa_access_token") || "";
@@ -1111,6 +1132,7 @@ function App() {
 
 	function handleAdminPanelClose() {
 		setShowAdminDashboard(false);
+		setActiveAdminTool("overview");
 		setAdminOverview(null);
 		setAdminUsers([]);
 		setAdminBets([]);
@@ -1190,13 +1212,17 @@ function App() {
 						<>
 							<h3>Admin Tools</h3>
 							<ul>
-								<li><button type="button" className="module-btn active">Overview</button></li>
-								<li><button type="button" className="module-btn">Users</button></li>
-								<li><button type="button" className="module-btn">Bets</button></li>
-								<li><button type="button" className="module-btn">Fraud Signals</button></li>
-								<li><button type="button" className="module-btn">Transactions</button></li>
-								<li><button type="button" className="module-btn">Results</button></li>
-								<li><button type="button" className="module-btn">Payouts</button></li>
+								{ADMIN_TOOLS.map((tool) => (
+									<li key={tool.key}>
+										<button
+											type="button"
+											className={`module-btn ${activeAdminTool === tool.key ? "active" : ""}`}
+											onClick={() => setActiveAdminTool(tool.key)}
+										>
+											{tool.label}
+										</button>
+									</li>
+								))}
 							</ul>
 						</>
 					) : (
@@ -1290,109 +1316,145 @@ function App() {
 										<div className="admin-card">
 											<h4>Session</h4>
 											<p>{currentUser ? `Admin: ${currentUser.fullName}` : "Authenticated"}</p>
+											<p>Current Module: {ADMIN_TOOLS.find((tool) => tool.key === activeAdminTool)?.label}</p>
 											<button type="button" onClick={refreshAdminDashboard} disabled={adminLoading}>Refresh Data</button>
 											<button type="button" onClick={handleAdminPanelClose}>Hide Dashboard</button>
 										</div>
 
-										<div className="admin-card">
-											<h4>Overview</h4>
-											<p>Users: {adminOverview?.users ?? 0}</p>
-											<p>Bets: {adminOverview?.bets ?? 0}</p>
-											<p>Pending Bets: {adminOverview?.pendingBets ?? 0}</p>
-											<p>Won Bets: {adminOverview?.wonBets ?? 0}</p>
-											<p>Payouts: {adminOverview?.payouts ?? 0}</p>
-											<p>Matches: {adminOverview?.matches ?? 0}</p>
-										</div>
+										{activeAdminTool === "overview" && (
+											<div className="admin-card">
+												<h4>Overview</h4>
+												<p>Users: {adminOverview?.users ?? 0}</p>
+												<p>Bets: {adminOverview?.bets ?? 0}</p>
+												<p>Pending Bets: {adminOverview?.pendingBets ?? 0}</p>
+												<p>Won Bets: {adminOverview?.wonBets ?? 0}</p>
+												<p>Payouts: {adminOverview?.payouts ?? 0}</p>
+												<p>Matches: {adminOverview?.matches ?? 0}</p>
+											</div>
+										)}
 
-										<form className="admin-card" onSubmit={handleAdminResultSubmit}>
-											<h4>Process Match Result</h4>
-											<input
-												type="text"
-												placeholder="Match ID"
-												value={adminMatchId}
-												onChange={(event) => setAdminMatchId(event.target.value)}
-												required
-											/>
-											<select value={adminResult} onChange={(event) => setAdminResult(event.target.value as Outcome)}>
-												<option value="home">Home</option>
-												<option value="draw">Draw</option>
-												<option value="away">Away</option>
-											</select>
-											<button type="submit" disabled={adminLoading}>Submit Result</button>
-										</form>
+										{activeAdminTool === "results" && (
+											<form className="admin-card" onSubmit={handleAdminResultSubmit}>
+												<h4>Process Match Result</h4>
+												<input
+													type="text"
+													placeholder="Match ID"
+													value={adminMatchId}
+													onChange={(event) => setAdminMatchId(event.target.value)}
+													required
+												/>
+												<select value={adminResult} onChange={(event) => setAdminResult(event.target.value as Outcome)}>
+													<option value="home">Home</option>
+													<option value="draw">Draw</option>
+													<option value="away">Away</option>
+												</select>
+												<button type="submit" disabled={adminLoading}>Submit Result</button>
+												<div className="admin-inline-list">
+													{resultCandidateMatches.map((match) => (
+														<button type="button" key={match.id} onClick={() => setAdminMatchId(match.id)}>
+															{match.homeTeam} vs {match.awayTeam}
+														</button>
+													))}
+												</div>
+											</form>
+										)}
 
-										<form className="admin-card" onSubmit={handleAdminPayout}>
-											<h4>Force Payout (Admin)</h4>
-											<input
-												type="text"
-												placeholder="Won Bet ID"
-												value={adminPayoutBetId}
-												onChange={(event) => setAdminPayoutBetId(event.target.value)}
-												required
-											/>
-											<button type="submit" disabled={adminLoading}>Process Payout</button>
-										</form>
+										{activeAdminTool === "payouts" && (
+											<form className="admin-card" onSubmit={handleAdminPayout}>
+												<h4>Force Payout (Admin)</h4>
+												<input
+													type="text"
+													placeholder="Won Bet ID"
+													value={adminPayoutBetId}
+													onChange={(event) => setAdminPayoutBetId(event.target.value)}
+													required
+												/>
+												<button type="submit" disabled={adminLoading}>Process Payout</button>
+												<div className="admin-inline-list">
+													{wonUnpaidBets.map((bet) => (
+														<button type="button" key={bet.id} onClick={() => setAdminPayoutBetId(bet.id)}>
+															{bet.id.slice(0, 8)} | {bet.potentialWin.toFixed(2)}
+														</button>
+													))}
+													{!wonUnpaidBets.length && <span>No unpaid won bets.</span>}
+												</div>
+											</form>
+										)}
 									</div>
 
-									<div className="admin-table-grid">
-									<section className="admin-card">
-										<h4>Users ({adminUsers.length})</h4>
-										<div className="admin-table-wrap">
-											<table>
-												<thead>
-													<tr><th>Name</th><th>Email</th><th>Role</th><th>Balance</th></tr>
-												</thead>
-												<tbody>
-													{adminUsers.slice(0, 20).map((user) => (
-														<tr key={user.id}><td>{user.fullName}</td><td>{user.email}</td><td>{user.role}</td><td>{user.balance.toFixed(2)}</td></tr>
-													))}
-												</tbody>
-											</table>
+									{(activeAdminTool === "users" || activeAdminTool === "overview") && (
+										<div className="admin-table-grid">
+											<section className="admin-card">
+												<h4>Users ({adminUsers.length})</h4>
+												<div className="admin-table-wrap">
+													<table>
+														<thead>
+															<tr><th>Name</th><th>Email</th><th>Role</th><th>Balance</th></tr>
+														</thead>
+														<tbody>
+															{adminUsers.slice(0, 40).map((user) => (
+																<tr key={user.id}><td>{user.fullName}</td><td>{user.email}</td><td>{user.role}</td><td>{user.balance.toFixed(2)}</td></tr>
+															))}
+														</tbody>
+													</table>
+												</div>
+											</section>
 										</div>
-									</section>
+									)}
 
-									<section className="admin-card">
-										<h4>Bets ({adminBets.length})</h4>
-										<div className="admin-table-wrap">
-											<table>
-												<thead>
-													<tr><th>Bet ID</th><th>User</th><th>Stake</th><th>Status</th><th>Paid</th></tr>
-												</thead>
-												<tbody>
-													{adminBets.slice(0, 20).map((bet) => (
-														<tr key={bet.id}><td>{bet.id}</td><td>{bet.userId}</td><td>{bet.stake.toFixed(2)}</td><td>{bet.status}</td><td>{bet.paidOut ? "Yes" : "No"}</td></tr>
-													))}
-												</tbody>
-											</table>
+									{(activeAdminTool === "bets" || activeAdminTool === "overview") && (
+										<div className="admin-table-grid">
+											<section className="admin-card">
+												<h4>Bets ({adminBets.length})</h4>
+												<div className="admin-table-wrap">
+													<table>
+														<thead>
+															<tr><th>Bet ID</th><th>User</th><th>Stake</th><th>Status</th><th>Paid</th></tr>
+														</thead>
+														<tbody>
+															{adminBets.slice(0, 40).map((bet) => (
+																<tr key={bet.id}><td>{bet.id}</td><td>{bet.userId}</td><td>{bet.stake.toFixed(2)}</td><td>{bet.status}</td><td>{bet.paidOut ? "Yes" : "No"}</td></tr>
+															))}
+														</tbody>
+													</table>
+												</div>
+											</section>
 										</div>
-									</section>
+									)}
 
-									<section className="admin-card">
-										<h4>Fraud Signals ({adminSignals.length})</h4>
-										<ul className="admin-signal-list">
-											{adminSignals.slice(0, 12).map((signal) => (
-												<li key={signal.userId}>{signal.email} | withdrawals {signal.withdrawalCount} | high stake bets {signal.highStakeBets}</li>
-											))}
-											{!adminSignals.length && <li>No active fraud signals.</li>}
-										</ul>
-									</section>
-
-									<section className="admin-card">
-										<h4>Transactions ({adminTransactions.length})</h4>
-										<div className="admin-table-wrap">
-											<table>
-												<thead>
-													<tr><th>Type</th><th>User</th><th>Amount</th><th>Status</th><th>Date</th></tr>
-												</thead>
-												<tbody>
-													{adminTransactions.slice(0, 20).map((txn) => (
-														<tr key={txn.id}><td>{txn.type}</td><td>{txn.userId}</td><td>{txn.amount.toFixed(2)}</td><td>{txn.status}</td><td>{formatKickoff(txn.createdAt)}</td></tr>
+									{(activeAdminTool === "fraud" || activeAdminTool === "overview") && (
+										<div className="admin-table-grid">
+											<section className="admin-card">
+												<h4>Fraud Signals ({adminSignals.length})</h4>
+												<ul className="admin-signal-list">
+													{adminSignals.slice(0, 20).map((signal) => (
+														<li key={signal.userId}>{signal.email} | withdrawals {signal.withdrawalCount} | high stake bets {signal.highStakeBets}</li>
 													))}
-												</tbody>
-											</table>
+													{!adminSignals.length && <li>No active fraud signals.</li>}
+												</ul>
+											</section>
 										</div>
-									</section>
-									</div>
+									)}
+
+									{(activeAdminTool === "transactions" || activeAdminTool === "overview") && (
+										<div className="admin-table-grid">
+											<section className="admin-card">
+												<h4>Transactions ({adminTransactions.length})</h4>
+												<div className="admin-table-wrap">
+													<table>
+														<thead>
+															<tr><th>Type</th><th>User</th><th>Amount</th><th>Status</th><th>Date</th></tr>
+														</thead>
+														<tbody>
+															{adminTransactions.slice(0, 40).map((txn) => (
+																<tr key={txn.id}><td>{txn.type}</td><td>{txn.userId}</td><td>{txn.amount.toFixed(2)}</td><td>{txn.status}</td><td>{formatKickoff(txn.createdAt)}</td></tr>
+															))}
+														</tbody>
+													</table>
+												</div>
+											</section>
+										</div>
+									)}
 								</>
 							)}
 						</section>
