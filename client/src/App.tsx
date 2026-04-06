@@ -9,11 +9,25 @@ type Match = {
 	homeTeam: string;
 	awayTeam: string;
 	league: string;
+	sport: string;
 	startTime: string;
 	odds: Record<Outcome, number>;
 	status: string;
 	result: Outcome | null;
 };
+
+type ModuleKey =
+	| "highlights"
+	| "popular"
+	| "top5"
+	| "today"
+	| "upcoming"
+	| "otherSports"
+	| "basketball"
+	| "tennis"
+	| "rugby"
+	| "cricket"
+	| "mma";
 
 type BetSelection = {
 	matchId: string;
@@ -35,6 +49,85 @@ type ApiPayload = Record<string, unknown>;
 
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 const SOCKET_BASE = import.meta.env.VITE_SOCKET_BASE || "";
+
+const FOOTBALL_MODULES: Array<{ key: ModuleKey; label: string }> = [
+	{ key: "highlights", label: "Highlights" },
+	{ key: "popular", label: "Popular Games" },
+	{ key: "top5", label: "Top 5 Leagues" },
+	{ key: "today", label: "Today Games" },
+	{ key: "upcoming", label: "Upcoming Games" }
+];
+
+const OTHER_SPORT_MODULES: Array<{ key: ModuleKey; label: string }> = [
+	{ key: "otherSports", label: "Other Sports" },
+	{ key: "basketball", label: "Basketball" },
+	{ key: "tennis", label: "Tennis" },
+	{ key: "rugby", label: "Rugby Union" },
+	{ key: "cricket", label: "Cricket" },
+	{ key: "mma", label: "MMA" }
+];
+
+const TOP_LEAGUES = new Set(["Premier League", "La Liga", "Serie A", "Bundesliga", "Ligue 1"]);
+const HIGHLIGHT_TEAMS = new Set([
+	"Arsenal",
+	"Chelsea",
+	"Liverpool",
+	"Manchester City",
+	"Manchester United",
+	"Barcelona",
+	"Real Madrid",
+	"Bayern Munich",
+	"PSG"
+]);
+
+function createSportFixture(monthValue: string, sport: string, home: string, away: string, day: number, slot: number): Match {
+	const [yearRaw, monthRaw] = monthValue.split("-");
+	const year = Number(yearRaw);
+	const month = Number(monthRaw);
+	const safeYear = Number.isInteger(year) ? year : new Date().getFullYear();
+	const safeMonth = Number.isInteger(month) && month >= 1 && month <= 12 ? month : new Date().getMonth() + 1;
+	const startHour = slot === 0 ? 13 : slot === 1 ? 16 : 20;
+	const start = new Date(Date.UTC(safeYear, safeMonth - 1, day, startHour, 15, 0, 0));
+    const homeOdd = Number((1.65 + ((day + slot) % 6) * 0.24).toFixed(2));
+    const drawOdd = Number((2.95 + ((day + slot + 2) % 5) * 0.21).toFixed(2));
+    const awayOdd = Number((1.72 + ((day + slot + 4) % 6) * 0.27).toFixed(2));
+
+	return {
+		id: `${sport}-${safeYear}-${safeMonth}-${day}-${slot}-${home}-${away}`,
+		homeTeam: home,
+		awayTeam: away,
+		league: `${sport} League`,
+		sport,
+		startTime: start.toISOString(),
+		odds: {
+			home: homeOdd,
+			draw: drawOdd,
+			away: awayOdd
+		},
+		status: "upcoming",
+		result: null
+	};
+}
+
+function buildOtherSportsMatches(monthValue: string): Match[] {
+	return [
+		createSportFixture(monthValue, "Basketball", "Lakers", "Celtics", 3, 0),
+		createSportFixture(monthValue, "Basketball", "Bulls", "Warriors", 10, 1),
+		createSportFixture(monthValue, "Basketball", "Heat", "Nets", 18, 2),
+		createSportFixture(monthValue, "Tennis", "Djokovic", "Alcaraz", 4, 1),
+		createSportFixture(monthValue, "Tennis", "Medvedev", "Sinner", 12, 2),
+		createSportFixture(monthValue, "Tennis", "Swiatek", "Sabalenka", 20, 0),
+		createSportFixture(monthValue, "Rugby Union", "Leinster", "Saracens", 6, 1),
+		createSportFixture(monthValue, "Rugby Union", "Sharks", "Stormers", 14, 0),
+		createSportFixture(monthValue, "Rugby Union", "Toulouse", "Munster", 22, 2),
+		createSportFixture(monthValue, "Cricket", "India", "Australia", 7, 2),
+		createSportFixture(monthValue, "Cricket", "England", "South Africa", 16, 1),
+		createSportFixture(monthValue, "Cricket", "Pakistan", "New Zealand", 24, 0),
+		createSportFixture(monthValue, "MMA", "Adesanya", "Whittaker", 9, 2),
+		createSportFixture(monthValue, "MMA", "Edwards", "Covington", 19, 1),
+		createSportFixture(monthValue, "MMA", "Jones", "Aspinall", 26, 2)
+	];
+}
 
 function toMonthInputValue(date = new Date()) {
 	const year = date.getFullYear();
@@ -140,6 +233,7 @@ function App() {
 	const [liveStatus, setLiveStatus] = useState("Connecting...");
 	const [selectedMonth, setSelectedMonth] = useState(toMonthInputValue);
 	const [selectedDate, setSelectedDate] = useState("all");
+	const [activeModule, setActiveModule] = useState<ModuleKey>("highlights");
 	const [authError, setAuthError] = useState("");
 	const [authMessage, setAuthMessage] = useState("");
 	const [authMode, setAuthMode] = useState<"login" | "register">("login");
@@ -153,6 +247,7 @@ function App() {
 	const [apiOnline, setApiOnline] = useState(true);
 	const isLoggedIn = Boolean(accessToken && currentUser);
 	const monthOptions = useMemo(() => buildMonthOptions(), []);
+	const otherSportsMatches = useMemo(() => buildOtherSportsMatches(selectedMonth), [selectedMonth]);
 
 	useEffect(() => {
 		const savedToken = localStorage.getItem("sportpesa_access_token") || "";
@@ -206,7 +301,14 @@ function App() {
 				}
 
 				if (mounted) {
-					setMatches(footballData.matches ?? []);
+					const footballMatches = Array.isArray(footballData.matches)
+						? (footballData.matches as Match[]).map((match) => ({
+							...match,
+							sport: "Football"
+						}))
+						: [];
+
+					setMatches(footballMatches);
 					setError("");
 					setLiveStatus(
 						footballData.source === "internal-fallback"
@@ -224,7 +326,14 @@ function App() {
 					}
 
 					if (mounted) {
-						setMatches(fallbackData.matches ?? []);
+						const fallbackMatches = Array.isArray(fallbackData.matches)
+							? (fallbackData.matches as Match[]).map((match) => ({
+								...match,
+								sport: "Football"
+							}))
+							: [];
+
+						setMatches(fallbackMatches);
 						setError("");
 						setLiveStatus("Using local match feed");
 					}
@@ -335,11 +444,17 @@ function App() {
 		});
 
 		socket.on("odds:snapshot", (payload: { matches: Match[] }) => {
-			setMatches(payload.matches ?? []);
+			const incoming = Array.isArray(payload.matches)
+				? payload.matches.map((match) => ({ ...match, sport: "Football" }))
+				: [];
+			setMatches(incoming);
 		});
 
 		socket.on("odds:update", (payload: { matches: Match[] }) => {
-			setMatches(payload.matches ?? []);
+			const incoming = Array.isArray(payload.matches)
+				? payload.matches.map((match) => ({ ...match, sport: "Football" }))
+				: [];
+			setMatches(incoming);
 			setLiveStatus("Live odds updating");
 		});
 
@@ -356,27 +471,80 @@ function App() {
 
 	useEffect(() => {
 		setSelectedDate("all");
-	}, [selectedMonth]);
+	}, [selectedMonth, activeModule]);
+
+	const moduleTitle = useMemo(() => {
+		return [...FOOTBALL_MODULES, ...OTHER_SPORT_MODULES].find((module) => module.key === activeModule)?.label || "Matches";
+	}, [activeModule]);
+
+	const scopedMatches = useMemo(() => {
+		const merged = [...matches, ...otherSportsMatches];
+		const now = new Date();
+		const todayKey = matchDateKey(now.toISOString());
+
+		switch (activeModule) {
+			case "highlights":
+				return merged
+					.filter(
+						(match) =>
+							match.sport === "Football" &&
+							(HIGHLIGHT_TEAMS.has(match.homeTeam) || HIGHLIGHT_TEAMS.has(match.awayTeam))
+					)
+					.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+			case "popular":
+				return merged
+					.filter((match) => match.sport === "Football")
+					.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+			case "top5":
+				return merged
+					.filter((match) => match.sport === "Football" && TOP_LEAGUES.has(match.league))
+					.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+			case "today":
+				return merged
+					.filter((match) => matchDateKey(match.startTime) === todayKey)
+					.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+			case "upcoming":
+				return merged
+					.filter((match) => new Date(match.startTime).getTime() >= now.getTime())
+					.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+			case "otherSports":
+				return merged
+					.filter((match) => match.sport !== "Football")
+					.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+			case "basketball":
+				return merged.filter((match) => match.sport === "Basketball");
+			case "tennis":
+				return merged.filter((match) => match.sport === "Tennis");
+			case "rugby":
+				return merged.filter((match) => match.sport === "Rugby Union");
+			case "cricket":
+				return merged.filter((match) => match.sport === "Cricket");
+			case "mma":
+				return merged.filter((match) => match.sport === "MMA");
+			default:
+				return merged;
+		}
+	}, [activeModule, matches, otherSportsMatches]);
 
 	const availableDates = useMemo(() => {
 		const byDate = new Set<string>();
 
-		for (const match of matches) {
+		for (const match of scopedMatches) {
 			if (typeof match.startTime === "string" && match.startTime.length >= 10) {
 				byDate.add(matchDateKey(match.startTime));
 			}
 		}
 
 		return Array.from(byDate).sort((a, b) => a.localeCompare(b));
-	}, [matches]);
+	}, [scopedMatches]);
 
 	const visibleMatches = useMemo(() => {
 		if (selectedDate === "all") {
-			return matches;
+			return scopedMatches;
 		}
 
-		return matches.filter((match) => matchDateKey(match.startTime) === selectedDate);
-	}, [matches, selectedDate]);
+		return scopedMatches.filter((match) => matchDateKey(match.startTime) === selectedDate);
+	}, [scopedMatches, selectedDate]);
 
 	const betslip = useMemo(() => Object.values(activeSelection), [activeSelection]);
 
@@ -556,19 +724,31 @@ function App() {
 				<aside className="left-panel">
 					<h3>Football</h3>
 					<ul>
-						<li>Highlights</li>
-						<li>Popular Games</li>
-						<li>Top 5 Leagues</li>
-						<li>Today Games</li>
-						<li>Upcoming Games</li>
+						{FOOTBALL_MODULES.map((module) => (
+							<li key={module.key}>
+								<button
+									type="button"
+									className={`module-btn ${activeModule === module.key ? "active" : ""}`}
+									onClick={() => setActiveModule(module.key)}
+								>
+									{module.label}
+								</button>
+							</li>
+						))}
 					</ul>
 					<h4>Other Sports</h4>
 					<ul>
-						<li>Basketball</li>
-						<li>Tennis</li>
-						<li>Rugby Union</li>
-						<li>Cricket</li>
-						<li>MMA</li>
+						{OTHER_SPORT_MODULES.map((module) => (
+							<li key={module.key}>
+								<button
+									type="button"
+									className={`module-btn ${activeModule === module.key ? "active" : ""}`}
+									onClick={() => setActiveModule(module.key)}
+								>
+									{module.label}
+								</button>
+							</li>
+						))}
 					</ul>
 				</aside>
 
@@ -576,7 +756,7 @@ function App() {
 					<div className="hero-banner">
 						<img src="/sport.svg" alt="SportPesa" />
 						<div>
-							<p>Football Betting Odds</p>
+							<p>{moduleTitle}</p>
 							<strong>{liveStatus}</strong>
 						</div>
 					</div>

@@ -156,15 +156,29 @@ body {
 }
 
 .left-panel li {
-	padding: 0.8rem 0.72rem;
 	border-bottom: 1px solid #22506a;
-	font-weight: 700;
-	font-size: 1.14rem;
-	color: #c8dae8;
+	list-style: none;
 }
 
-.left-panel li:first-child {
-	background: #29566d;
+.module-btn {
+	width: 100%;
+	padding: 0.8rem 0.72rem;
+	border: 0;
+	background: transparent;
+	color: #c8dae8;
+	text-align: left;
+	font-weight: 700;
+	font-size: 1.14rem;
+	cursor: pointer;
+}
+
+.module-btn:hover {
+	background: #23475f;
+}
+
+.module-btn.active {
+	background: #2d607a;
+	color: #ffffff;
 }
 
 .center-panel {
