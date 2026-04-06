@@ -108,6 +108,28 @@ type AdminTransaction = {
 
 type AdminToolKey = "overview" | "users" | "bets" | "fraud" | "transactions" | "results" | "payouts";
 
+type AccountToolKey = "deposit" | "withdraw" | "betHistory" | "transactionHistory" | "settings" | "selfExclusion";
+
+type AccountTransaction = {
+	id: string;
+	type: string;
+	status: string;
+	amount: number;
+	createdAt: string;
+	phoneNumber?: string;
+	reference?: string;
+};
+
+type MyBet = {
+	id: string;
+	stake: number;
+	combinedOdds: number;
+	potentialWin: number;
+	status: string;
+	paidOut: boolean;
+	createdAt: string;
+};
+
 type ApiPayload = Record<string, unknown>;
 
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
@@ -207,6 +229,15 @@ const ADMIN_TOOLS: Array<{ key: AdminToolKey; label: string }> = [
 	{ key: "transactions", label: "Transactions" },
 	{ key: "results", label: "Results" },
 	{ key: "payouts", label: "Payouts" }
+];
+
+const ACCOUNT_TOOLS: Array<{ key: AccountToolKey; label: string }> = [
+	{ key: "deposit", label: "Deposit" },
+	{ key: "withdraw", label: "Withdraw" },
+	{ key: "betHistory", label: "Bet History" },
+	{ key: "transactionHistory", label: "Transaction History" },
+	{ key: "settings", label: "Settings" },
+	{ key: "selfExclusion", label: "Self Exclusion" }
 ];
 
 const HERO_SLIDES: HeroSlide[] = [
@@ -448,6 +479,18 @@ function App() {
 	const [phoneNumber, setPhoneNumber] = useState("");
 	const [accessToken, setAccessToken] = useState("");
 	const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+	const [accountView, setAccountView] = useState(false);
+	const [activeAccountTool, setActiveAccountTool] = useState<AccountToolKey>("deposit");
+	const [accountLoading, setAccountLoading] = useState(false);
+	const [accountError, setAccountError] = useState("");
+	const [accountMessage, setAccountMessage] = useState("");
+	const [depositAmount, setDepositAmount] = useState("");
+	const [depositPhone, setDepositPhone] = useState("");
+	const [withdrawAmount, setWithdrawAmount] = useState("");
+	const [selfExclusionHours, setSelfExclusionHours] = useState("24");
+	const [selfExclusionEnabled, setSelfExclusionEnabled] = useState(false);
+	const [accountTransactions, setAccountTransactions] = useState<AccountTransaction[]>([]);
+	const [accountBets, setAccountBets] = useState<MyBet[]>([]);
 	const [showAdminDashboard, setShowAdminDashboard] = useState(false);
 	const [adminLoading, setAdminLoading] = useState(false);
 	const [adminError, setAdminError] = useState("");
@@ -469,6 +512,7 @@ function App() {
 	const localFootballMatches = useMemo(() => buildLocalFootballMatches(selectedMonth), [selectedMonth]);
 	const sportsbookView = activeTopNav === "sports" || activeTopNav === "liveGames";
 	const adminView = Boolean(showAdminDashboard && isAdminUser);
+	const accountWorkspaceView = Boolean(accountView && isLoggedIn && !adminView);
 	const wonUnpaidBets = useMemo(
 		() => adminBets.filter((bet) => bet.status === "won" && !bet.paidOut),
 		[adminBets]
@@ -534,6 +578,140 @@ function App() {
 				? (transactionsData.transactions as AdminTransaction[])
 				: []
 		);
+	}
+
+	async function fetchProfileAndAccountData(token: string) {
+		const headers = {
+			Authorization: `Bearer ${token}`
+		};
+
+		const [profileResponse, transactionsResponse, betsResponse] = await Promise.all([
+			fetch(`${API_BASE}/users/me`, { headers }),
+			fetch(`${API_BASE}/users/me/transactions`, { headers }),
+			fetch(`${API_BASE}/bets/my`, { headers })
+		]);
+
+		const [profileData, transactionsData, betsData] = await Promise.all([
+			profileResponse.json(),
+			transactionsResponse.json(),
+			betsResponse.json()
+		]);
+
+		if (!profileResponse.ok || !transactionsResponse.ok || !betsResponse.ok) {
+			throw new Error("Failed to fetch account data");
+		}
+
+		if (isUserProfile(profileData?.profile)) {
+			setCurrentUser(profileData.profile);
+			localStorage.setItem("sportpesa_user", JSON.stringify(profileData.profile));
+		}
+
+		setAccountTransactions(
+			Array.isArray(transactionsData?.transactions)
+				? (transactionsData.transactions as AccountTransaction[])
+				: []
+		);
+
+		setAccountBets(Array.isArray(betsData?.bets) ? (betsData.bets as MyBet[]) : []);
+	}
+
+	async function refreshAccountWorkspace() {
+		if (!accessToken || !isLoggedIn) {
+			return;
+		}
+
+		setAccountLoading(true);
+		setAccountError("");
+		try {
+			await fetchProfileAndAccountData(accessToken);
+			setAccountMessage("Account data refreshed.");
+		} catch (workspaceError) {
+			setAccountError(workspaceError instanceof Error ? workspaceError.message : "Failed to refresh account workspace");
+		} finally {
+			setAccountLoading(false);
+		}
+	}
+
+	async function handleDeposit(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		if (!accessToken) {
+			setAccountError("Please login first.");
+			return;
+		}
+
+		setAccountLoading(true);
+		setAccountError("");
+		setAccountMessage("");
+		try {
+			const response = await fetch(`${API_BASE}/wallet/deposit`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${accessToken}`
+				},
+				body: JSON.stringify({
+					amount: Number(depositAmount),
+					phoneNumber: depositPhone
+				})
+			});
+
+			const data = await parseJsonSafely(response);
+			if (!response.ok) {
+				throw new Error(getPayloadString(data, "error") || `Deposit failed (${response.status})`);
+			}
+
+			setAccountMessage("Deposit completed successfully.");
+			setDepositAmount("");
+			await fetchProfileAndAccountData(accessToken);
+		} catch (depositError) {
+			setAccountError(depositError instanceof Error ? depositError.message : "Deposit failed");
+		} finally {
+			setAccountLoading(false);
+		}
+	}
+
+	async function handleWithdraw(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		if (!accessToken) {
+			setAccountError("Please login first.");
+			return;
+		}
+
+		setAccountLoading(true);
+		setAccountError("");
+		setAccountMessage("");
+		try {
+			const response = await fetch(`${API_BASE}/wallet/withdraw`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${accessToken}`
+				},
+				body: JSON.stringify({
+					amount: Number(withdrawAmount)
+				})
+			});
+
+			const data = await parseJsonSafely(response);
+			if (!response.ok) {
+				throw new Error(getPayloadString(data, "error") || `Withdraw failed (${response.status})`);
+			}
+
+			setAccountMessage("Withdrawal completed successfully.");
+			setWithdrawAmount("");
+			await fetchProfileAndAccountData(accessToken);
+		} catch (withdrawError) {
+			setAccountError(withdrawError instanceof Error ? withdrawError.message : "Withdrawal failed");
+		} finally {
+			setAccountLoading(false);
+		}
+	}
+
+	function handleSelfExclusion(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		setSelfExclusionEnabled(true);
+		setAccountMessage(`Self-exclusion enabled for ${selfExclusionHours} hours.`);
+		setAccountError("");
 	}
 
 	useEffect(() => {
@@ -766,6 +944,25 @@ function App() {
 				setAdminLoading(false);
 			});
 	}, [accessToken, adminView, isAdminUser]);
+
+	useEffect(() => {
+		if (!accountWorkspaceView || !accessToken) {
+			return;
+		}
+
+		setAccountLoading(true);
+		setAccountError("");
+		fetchProfileAndAccountData(accessToken)
+			.then(() => {
+				setAccountMessage((previous) => previous || "Account workspace ready.");
+			})
+			.catch((loadError) => {
+				setAccountError(loadError instanceof Error ? loadError.message : "Failed to load account workspace");
+			})
+			.finally(() => {
+				setAccountLoading(false);
+			});
+	}, [accessToken, accountWorkspaceView]);
 
 	useEffect(() => {
 		const timer = window.setInterval(() => {
@@ -1027,6 +1224,7 @@ function App() {
 			if (isUserProfile(userPayload)) {
 				setCurrentUser(userPayload);
 				localStorage.setItem("sportpesa_user", JSON.stringify(userPayload));
+				setAccountView(true);
 				if (userPayload.role === "admin") {
 					setShowAdminDashboard(true);
 					setAdminMessage("Admin session active.");
@@ -1145,6 +1343,10 @@ function App() {
 	function handleLogout() {
 		setAccessToken("");
 		setCurrentUser(null);
+		setAccountView(false);
+		setActiveAccountTool("deposit");
+		setAccountTransactions([]);
+		setAccountBets([]);
 		setShowAdminDashboard(false);
 		setAdminOverview(null);
 		setAdminUsers([]);
@@ -1171,6 +1373,9 @@ function App() {
 								<span>Signed in</span>
 								<strong>{currentUser?.fullName}</strong>
 							</div>
+							<button type="button" onClick={() => setAccountView((previous) => !previous)}>
+								{accountView ? "Hide Account" : "Account"}
+							</button>
 							{isAdminUser && (
 								<button
 									type="button"
@@ -1208,7 +1413,33 @@ function App() {
 
 			<main className="content-grid">
 				<aside className="left-panel">
-					{adminView ? (
+					{accountWorkspaceView ? (
+						<>
+							<div className="account-summary-box">
+								<p>Logged in</p>
+								<strong>{currentUser?.phoneNumber || currentUser?.email || currentUser?.fullName}</strong>
+								<div className="account-balance-pill">
+									<span>Balance</span>
+									<b>KSH {currentUser?.balance.toFixed(2) ?? "0.00"}</b>
+								</div>
+							</div>
+
+							<h3>Account</h3>
+							<ul>
+								{ACCOUNT_TOOLS.map((tool) => (
+									<li key={tool.key}>
+										<button
+											type="button"
+											className={`module-btn ${activeAccountTool === tool.key ? "active" : ""}`}
+											onClick={() => setActiveAccountTool(tool.key)}
+										>
+											{tool.label}
+										</button>
+									</li>
+								))}
+							</ul>
+						</>
+					) : adminView ? (
 						<>
 							<h3>Admin Tools</h3>
 							<ul>
@@ -1460,7 +1691,144 @@ function App() {
 						</section>
 					)}
 
-					{!adminView && !sportsbookView && (
+					{accountWorkspaceView && (
+						<section className="account-dashboard">
+							<h3>Account</h3>
+							{accountError && <p className="error-text">{accountError}</p>}
+							{accountMessage && <p className="status-text">{accountMessage}</p>}
+
+							{activeAccountTool === "deposit" && (
+								<div className="account-card">
+									<h4>Deposit</h4>
+									<p>Please select a payment method:</p>
+									<div className="payment-methods">
+										<button type="button" className="mpesa">M-PESA</button>
+										<button type="button" className="airtel">airtel money</button>
+									</div>
+
+									<form className="account-form" onSubmit={handleDeposit}>
+										<label htmlFor="deposit-amount">Amount</label>
+										<div className="amount-row">
+											<span>KSH</span>
+											<input
+												id="deposit-amount"
+												type="number"
+												min="1"
+												placeholder="Amount to deposit"
+												value={depositAmount}
+												onChange={(event) => setDepositAmount(event.target.value)}
+												required
+											/>
+										</div>
+										<input
+											type="tel"
+											placeholder="M-Pesa phone number"
+											value={depositPhone}
+											onChange={(event) => setDepositPhone(event.target.value)}
+											required
+										/>
+										<button type="submit" disabled={accountLoading}>{accountLoading ? "Processing..." : "Deposit"}</button>
+									</form>
+
+									<p className="status-text">Minimum KSH 1.00, Maximum KSH 250,000.00</p>
+									<ol className="account-instructions">
+										<li>Go to M-Pesa menu</li>
+										<li>Select payment services</li>
+										<li>Click on Paybill</li>
+										<li>Enter business number as 955100</li>
+										<li>Enter account as your registered mobile number</li>
+										<li>Enter amount and confirm</li>
+									</ol>
+								</div>
+							)}
+
+							{activeAccountTool === "withdraw" && (
+								<div className="account-card">
+									<h4>Withdraw</h4>
+									<form className="account-form" onSubmit={handleWithdraw}>
+										<input
+											type="number"
+											min="1"
+											placeholder="Amount to withdraw"
+											value={withdrawAmount}
+											onChange={(event) => setWithdrawAmount(event.target.value)}
+											required
+										/>
+										<button type="submit" disabled={accountLoading}>{accountLoading ? "Processing..." : "Withdraw"}</button>
+									</form>
+									<p className="status-text">Withdrawal is sent to your wallet after successful processing.</p>
+								</div>
+							)}
+
+							{activeAccountTool === "betHistory" && (
+								<div className="account-card">
+									<h4>Bet History ({accountBets.length})</h4>
+									<div className="account-table-wrap">
+										<table>
+											<thead>
+												<tr><th>Bet ID</th><th>Stake</th><th>Potential Win</th><th>Status</th><th>Date</th></tr>
+											</thead>
+											<tbody>
+												{accountBets.slice(0, 40).map((bet) => (
+													<tr key={bet.id}><td>{bet.id}</td><td>{bet.stake.toFixed(2)}</td><td>{bet.potentialWin.toFixed(2)}</td><td>{bet.status}</td><td>{formatKickoff(bet.createdAt)}</td></tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								</div>
+							)}
+
+							{activeAccountTool === "transactionHistory" && (
+								<div className="account-card">
+									<h4>Transaction History ({accountTransactions.length})</h4>
+									<div className="account-table-wrap">
+										<table>
+											<thead>
+												<tr><th>Type</th><th>Amount</th><th>Status</th><th>Reference</th><th>Date</th></tr>
+											</thead>
+											<tbody>
+												{accountTransactions.slice(0, 50).map((transaction) => (
+													<tr key={transaction.id}><td>{transaction.type}</td><td>{transaction.amount.toFixed(2)}</td><td>{transaction.status}</td><td>{transaction.reference || "-"}</td><td>{formatKickoff(transaction.createdAt)}</td></tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								</div>
+							)}
+
+							{activeAccountTool === "settings" && (
+								<div className="account-card">
+									<h4>Settings</h4>
+									<p>Name: {currentUser?.fullName}</p>
+									<p>Email: {currentUser?.email}</p>
+									<p>Phone: {currentUser?.phoneNumber || "-"}</p>
+									<button type="button" onClick={refreshAccountWorkspace} disabled={accountLoading}>Refresh Profile</button>
+								</div>
+							)}
+
+							{activeAccountTool === "selfExclusion" && (
+								<div className="account-card">
+									<h4>Self Exclusion</h4>
+									<form className="account-form" onSubmit={handleSelfExclusion}>
+										<select value={selfExclusionHours} onChange={(event) => setSelfExclusionHours(event.target.value)}>
+											<option value="24">24 hours</option>
+											<option value="72">72 hours</option>
+											<option value="168">7 days</option>
+											<option value="720">30 days</option>
+										</select>
+										<button type="submit">Activate Self Exclusion</button>
+									</form>
+									<p className="status-text">
+										{selfExclusionEnabled
+											? `Self exclusion active for ${selfExclusionHours} hours.`
+											: "Self exclusion is not active."}
+									</p>
+								</div>
+							)}
+						</section>
+					)}
+
+					{!adminView && !accountWorkspaceView && !sportsbookView && (
 						<section className="product-panel">
 							<h3>{topNavContent.heading}</h3>
 							<p>{topNavContent.subtitle}</p>
@@ -1475,7 +1843,7 @@ function App() {
 						</section>
 					)}
 
-					{!adminView && sportsbookView && (
+					{!adminView && !accountWorkspaceView && sportsbookView && (
 						<>
 
 					<div className="filter-bar">
