@@ -132,6 +132,33 @@ type AccountDetailsForm = {
 	altMobile2: string;
 };
 
+function createEmptyAccountDetailsForm(): AccountDetailsForm {
+	return {
+		mobileNumber: "",
+		firstName: "",
+		middleName: "",
+		lastName: "",
+		dateOfBirth: "",
+		idNumber: "",
+		occupation: "",
+		villageStreet: "",
+		streetNumber: "",
+		block: "",
+		city: "",
+		county: "",
+		subCounty: "",
+		postalAddress: "",
+		postalCode: "",
+		emailAddress: "",
+		altMobile1: "",
+		altMobile2: ""
+	};
+}
+
+function accountDetailsStorageKey(userId: string) {
+	return `sportpesa_account_details_${userId}`;
+}
+
 type AccountTransaction = {
 	id: string;
 	type: string;
@@ -154,8 +181,8 @@ type MyBet = {
 
 type ApiPayload = Record<string, unknown>;
 
-const API_BASE = import.meta.env.VITE_API_BASE || "/api";
-const SOCKET_BASE = import.meta.env.VITE_SOCKET_BASE || "";
+const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:5001/api" : "/api");
+const SOCKET_BASE = import.meta.env.VITE_SOCKET_BASE || (import.meta.env.DEV ? "http://localhost:5001" : "");
 
 const FOOTBALL_MODULES: Array<{ key: ModuleKey; label: string }> = [
 	{ key: "highlights", label: "Highlights" },
@@ -513,57 +540,7 @@ function App() {
 	const [selfExclusionEnabled, setSelfExclusionEnabled] = useState(false);
 	const [accountTransactions, setAccountTransactions] = useState<AccountTransaction[]>([]);
 	const [accountBets, setAccountBets] = useState<MyBet[]>([]);
-	const [accountDetailsForm, setAccountDetailsForm] = useState<AccountDetailsForm>(() => {
-		try {
-			const stored = localStorage.getItem("sportpesa_account_details");
-			if (stored) {
-				const parsed = JSON.parse(stored) as Partial<AccountDetailsForm>;
-				return {
-					mobileNumber: parsed.mobileNumber || "",
-					firstName: parsed.firstName || "",
-					middleName: parsed.middleName || "",
-					lastName: parsed.lastName || "",
-					dateOfBirth: parsed.dateOfBirth || "",
-					idNumber: parsed.idNumber || "",
-					occupation: parsed.occupation || "",
-					villageStreet: parsed.villageStreet || "",
-					streetNumber: parsed.streetNumber || "",
-					block: parsed.block || "",
-					city: parsed.city || "",
-					county: parsed.county || "",
-					subCounty: parsed.subCounty || "",
-					postalAddress: parsed.postalAddress || "",
-					postalCode: parsed.postalCode || "",
-					emailAddress: parsed.emailAddress || "",
-					altMobile1: parsed.altMobile1 || "",
-					altMobile2: parsed.altMobile2 || ""
-				};
-			}
-		} catch {
-			// Keep default values when persisted data cannot be parsed.
-		}
-
-		return {
-			mobileNumber: "",
-			firstName: "",
-			middleName: "",
-			lastName: "",
-			dateOfBirth: "",
-			idNumber: "",
-			occupation: "",
-			villageStreet: "",
-			streetNumber: "",
-			block: "",
-			city: "",
-			county: "",
-			subCounty: "",
-			postalAddress: "",
-			postalCode: "",
-			emailAddress: "",
-			altMobile1: "",
-			altMobile2: ""
-		};
-	});
+	const [accountDetailsForm, setAccountDetailsForm] = useState<AccountDetailsForm>(createEmptyAccountDetailsForm);
 	const [showAdminDashboard, setShowAdminDashboard] = useState(false);
 	const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>(() => {
 		const stored = localStorage.getItem("sportpesa_language");
@@ -625,20 +602,49 @@ function App() {
 
 	useEffect(() => {
 		if (!currentUser) {
+			setAccountDetailsForm(createEmptyAccountDetailsForm());
 			return;
 		}
+
+		let parsed: Partial<AccountDetailsForm> = {};
+		const storageKey = accountDetailsStorageKey(currentUser.id);
+
+		try {
+			const stored = localStorage.getItem(storageKey);
+			if (stored) {
+				parsed = JSON.parse(stored) as Partial<AccountDetailsForm>;
+			}
+		} catch {
+			parsed = {};
+		}
+
+		// Remove legacy global settings key to prevent stale details leaking between accounts.
+		localStorage.removeItem("sportpesa_account_details");
 
 		const names = currentUser.fullName.trim().split(/\s+/).filter(Boolean);
 		const first = names[0] || "";
 		const last = names.length > 1 ? names[names.length - 1] : "";
 
-		setAccountDetailsForm((previous) => ({
-			...previous,
-			mobileNumber: previous.mobileNumber || currentUser.phoneNumber || "",
-			emailAddress: previous.emailAddress || currentUser.email || "",
-			firstName: previous.firstName || first,
-			lastName: previous.lastName || last
-		}));
+		setAccountDetailsForm({
+			mobileNumber: parsed.mobileNumber || currentUser.phoneNumber || "",
+			firstName: parsed.firstName || first,
+			middleName: parsed.middleName || "",
+			lastName: parsed.lastName || last,
+			dateOfBirth: parsed.dateOfBirth || "",
+			idNumber: parsed.idNumber || "",
+			occupation: parsed.occupation || "",
+			villageStreet: parsed.villageStreet || "",
+			streetNumber: parsed.streetNumber || "",
+			block: parsed.block || "",
+			city: parsed.city || "",
+			county: parsed.county || "",
+			subCounty: parsed.subCounty || "",
+			postalAddress: parsed.postalAddress || "",
+			postalCode: parsed.postalCode || "",
+			emailAddress: parsed.emailAddress || currentUser.email || "",
+			altMobile1: parsed.altMobile1 || "",
+			altMobile2: parsed.altMobile2 || ""
+		});
 	}, [currentUser]);
 
 	useEffect(() => {
@@ -1557,7 +1563,9 @@ function App() {
 
 	function handleAccountDetailsSave(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
-		localStorage.setItem("sportpesa_account_details", JSON.stringify(accountDetailsForm));
+		if (currentUser) {
+			localStorage.setItem(accountDetailsStorageKey(currentUser.id), JSON.stringify(accountDetailsForm));
+		}
 
 		if (currentUser) {
 			const nextUser: UserProfile = {
