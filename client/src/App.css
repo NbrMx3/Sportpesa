@@ -328,35 +328,43 @@ body {
 }
 
 .account-summary-box {
-	padding: 0.75rem;
+	padding: 0.78rem;
 	border-bottom: 1px solid #2d4f67;
-	background: #163248;
+	background: linear-gradient(180deg, #d9dde1 0 52%, #13283a 52% 100%);
 }
 
 .account-summary-box p {
 	margin: 0;
-	font-size: 1.05rem;
+	font-size: 1.02rem;
 	font-weight: 700;
+	color: #001f56;
 }
 
 .account-summary-box strong {
 	display: block;
 	margin-top: 0.2rem;
-	font-size: 1.6rem;
+	font-size: 1.9rem;
+	color: #001f56;
 }
 
 .account-balance-pill {
 	margin-top: 0.65rem;
-	padding-top: 0.52rem;
-	border-top: 1px solid #3a5f78;
+	padding-top: 0.65rem;
+	border-top: 1px solid #36566d;
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
 }
 
+.account-balance-pill span {
+	font-size: 0.98rem;
+	font-weight: 700;
+	color: #dbeaf4;
+}
+
 .account-balance-pill b {
 	color: #ffb125;
-	font-size: 1.15rem;
+	font-size: 1.05rem;
 }
 
 .account-dashboard {
@@ -503,6 +511,42 @@ body {
 .left-panel li {
 	border-bottom: 1px solid #22506a;
 	list-style: none;
+}
+
+.account-module-btn {
+	display: grid;
+	grid-template-columns: 24px 1fr auto;
+	gap: 0.55rem;
+	align-items: center;
+	padding: 0.72rem 0.58rem;
+	font-size: 1.05rem;
+	font-weight: 800;
+	background: #17465f;
+}
+
+.left-panel li:nth-child(odd) .account-module-btn {
+	background: #15506a;
+}
+
+.account-module-btn:hover {
+	background: #2f627a;
+}
+
+.account-module-btn.active {
+	background: #4d778d;
+}
+
+.account-tool-icon {
+	display: grid;
+	place-items: center;
+	font-size: 1rem;
+	opacity: 0.95;
+}
+
+.account-tool-marker {
+	font-size: 1.1rem;
+	font-weight: 900;
+	opacity: 0.85;
 }
 
 .module-btn {

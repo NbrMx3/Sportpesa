@@ -231,13 +231,13 @@ const ADMIN_TOOLS: Array<{ key: AdminToolKey; label: string }> = [
 	{ key: "payouts", label: "Payouts" }
 ];
 
-const ACCOUNT_TOOLS: Array<{ key: AccountToolKey; label: string }> = [
-	{ key: "deposit", label: "Deposit" },
-	{ key: "withdraw", label: "Withdraw" },
-	{ key: "betHistory", label: "Bet History" },
-	{ key: "transactionHistory", label: "Transaction History" },
-	{ key: "settings", label: "Settings" },
-	{ key: "selfExclusion", label: "Self Exclusion" }
+const ACCOUNT_TOOLS: Array<{ key: AccountToolKey; label: string; icon: string; marker?: string }> = [
+	{ key: "deposit", label: "Deposit", icon: "⌄" },
+	{ key: "withdraw", label: "Withdraw", icon: "⌃" },
+	{ key: "betHistory", label: "Bet History", icon: "◷", marker: "+" },
+	{ key: "transactionHistory", label: "Transaction History", icon: "⇅" },
+	{ key: "settings", label: "Settings", icon: "⚙" },
+	{ key: "selfExclusion", label: "Self Exclusion", icon: "✋" }
 ];
 
 const HERO_SLIDES: HeroSlide[] = [
@@ -1430,10 +1430,12 @@ function App() {
 									<li key={tool.key}>
 										<button
 											type="button"
-											className={`module-btn ${activeAccountTool === tool.key ? "active" : ""}`}
+											className={`module-btn account-module-btn ${activeAccountTool === tool.key ? "active" : ""}`}
 											onClick={() => setActiveAccountTool(tool.key)}
 										>
-											{tool.label}
+											<span className="account-tool-icon" aria-hidden="true">{tool.icon}</span>
+											<span>{tool.label}</span>
+											{tool.marker && <span className="account-tool-marker">{tool.marker}</span>}
 										</button>
 									</li>
 								))}
