@@ -583,6 +583,7 @@ function App() {
 	const [adminResult, setAdminResult] = useState<Outcome>("home");
 	const [adminPayoutBetId, setAdminPayoutBetId] = useState("");
 	const [apiOnline, setApiOnline] = useState(true);
+	const [apiRetryTick, setApiRetryTick] = useState(0);
 	const languageMenuRef = useRef<HTMLDivElement | null>(null);
 	const isLoggedIn = Boolean(accessToken && currentUser);
 	const isAdminUser = currentUser?.role === "admin";
@@ -842,16 +843,27 @@ function App() {
 		const queryString = params.toString();
 
 		async function checkApiOnline() {
-			try {
-				const response = await fetch(`${API_BASE}/health`);
-				if (mounted) {
-					setApiOnline(response.ok);
-				}
-			} catch {
-				if (mounted) {
-					setApiOnline(false);
+			const healthPaths = [`${API_BASE}/health`, "/api/health", "/health"];
+
+			for (const path of healthPaths) {
+				try {
+					const response = await fetch(path);
+					if (response.ok) {
+						if (mounted) {
+							setApiOnline(true);
+						}
+						return true;
+					}
+				} catch {
+					// Try next health path candidate.
 				}
 			}
+
+			if (mounted) {
+				setApiOnline(false);
+			}
+
+			return false;
 		}
 
 		async function loadMatches() {
@@ -922,7 +934,53 @@ function App() {
 		return () => {
 			mounted = false;
 		};
-	}, [localFootballMatches, selectedMonth]);
+	}, [apiRetryTick, localFootballMatches, selectedMonth]);
+
+	useEffect(() => {
+		let mounted = true;
+
+		async function probeApiHealth() {
+			const healthPaths = [`${API_BASE}/health`, "/api/health", "/health"];
+			let healthy = false;
+
+			for (const path of healthPaths) {
+				try {
+					const response = await fetch(path);
+					if (response.ok) {
+						healthy = true;
+						break;
+					}
+				} catch {
+					// Continue checking other health path candidates.
+				}
+			}
+
+			if (!mounted) {
+				return;
+			}
+
+			if (healthy && !apiOnline) {
+				setApiOnline(true);
+				setApiRetryTick((previous) => previous + 1);
+				setError("");
+				setLiveStatus("API reconnected. Loading live fixtures...");
+			}
+
+			if (!healthy && apiOnline) {
+				setApiOnline(false);
+			}
+		}
+
+		void probeApiHealth();
+		const intervalId = window.setInterval(() => {
+			void probeApiHealth();
+		}, 12000);
+
+		return () => {
+			mounted = false;
+			window.clearInterval(intervalId);
+		};
+	}, [apiOnline]);
 
 	useEffect(() => {
 		let mounted = true;
