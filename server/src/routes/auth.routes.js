@@ -2,10 +2,12 @@ import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
+import { OAuth2Client } from "google-auth-library";
 import { config } from "../config.js";
 import { mapUser, query } from "../data/db.js";
 
 const router = express.Router();
+const googleClient = new OAuth2Client(config.googleClientId || undefined);
 
 function signAccessToken(user) {
   return jwt.sign({ sub: user.id, role: user.role }, config.jwtSecret, { expiresIn: "8h" });
@@ -18,6 +20,10 @@ function signRefreshToken(tokenId, userId) {
 function normalizePhone(phoneNumber) {
   if (!phoneNumber) return null;
   return String(phoneNumber).replace(/\s+/g, "").trim();
+}
+
+function isAdminGoogleEmail(email) {
+  return Boolean(email && config.adminGoogleEmails.includes(String(email).toLowerCase()));
 }
 
 router.post("/signup", async (req, res) => {
@@ -134,6 +140,132 @@ router.post("/login", async (req, res) => {
     return res.json({ user: safeUser, token: accessToken, accessToken, refreshToken });
   } catch {
     return res.status(500).json({ error: "Failed to login" });
+  }
+});
+
+router.post("/admin/login", async (req, res) => {
+  try {
+    const { email, phoneNumber, identifier, password } = req.body;
+
+    const incomingIdentifier = identifier || email || phoneNumber;
+
+    if (!incomingIdentifier || !password) {
+      return res.status(400).json({ error: "identifier (email/phoneNumber) and password are required" });
+    }
+
+    const rawIdentifier = String(incomingIdentifier).trim();
+    const isEmail = rawIdentifier.includes("@");
+    const normalizedIdentifier = isEmail ? rawIdentifier.toLowerCase() : normalizePhone(rawIdentifier);
+
+    const result = await query(
+      `SELECT id, full_name, email, phone_number, role, balance, created_at, password_hash
+       FROM users
+       WHERE ${isEmail ? "email" : "phone_number"} = $1`,
+      [normalizedIdentifier]
+    );
+
+    const user = result.rows[0];
+
+    if (!user) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    if (user.role !== "admin") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const passwordMatches = await bcrypt.compare(password, user.password_hash);
+
+    if (!passwordMatches) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const safeUser = mapUser(user);
+    const accessToken = signAccessToken(safeUser);
+    const refreshTokenId = uuidv4();
+    const refreshToken = signRefreshToken(refreshTokenId, safeUser.id);
+
+    await query(
+      `INSERT INTO refresh_tokens (id, user_id, token, expires_at)
+       VALUES ($1, $2, $3, NOW() + INTERVAL '7 days')`,
+      [refreshTokenId, safeUser.id, refreshToken]
+    );
+
+    return res.json({ user: safeUser, token: accessToken, accessToken, refreshToken });
+  } catch {
+    return res.status(500).json({ error: "Failed to login admin" });
+  }
+});
+
+router.post("/admin/google", async (req, res) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({ error: "idToken is required" });
+    }
+
+    if (!config.googleClientId) {
+      return res.status(500).json({ error: "GOOGLE_CLIENT_ID is not configured" });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: config.googleClientId
+    });
+
+    const payload = ticket.getPayload();
+    const googleEmail = payload?.email ? String(payload.email).toLowerCase() : "";
+
+    if (!googleEmail) {
+      return res.status(401).json({ error: "Google token does not contain an email" });
+    }
+
+    if (!isAdminGoogleEmail(googleEmail)) {
+      return res.status(403).json({ error: "Google account is not authorized for admin access" });
+    }
+
+    let userResult = await query(
+      `SELECT id, full_name, email, phone_number, role, balance, created_at
+       FROM users
+       WHERE email = $1
+       LIMIT 1`,
+      [googleEmail]
+    );
+
+    if (!userResult.rowCount) {
+      const generatedPassword = await bcrypt.hash(uuidv4(), 10);
+      const inserted = await query(
+        `INSERT INTO users (id, full_name, email, phone_number, password_hash, role, balance)
+         VALUES ($1, $2, $3, $4, $5, 'admin', 0)
+         RETURNING id, full_name, email, phone_number, role, balance, created_at`,
+        [uuidv4(), payload?.name || "Google Admin", googleEmail, null, generatedPassword]
+      );
+      userResult = inserted;
+    } else if (userResult.rows[0].role !== "admin") {
+      await query("UPDATE users SET role = 'admin' WHERE id = $1", [userResult.rows[0].id]);
+      userResult = await query(
+        `SELECT id, full_name, email, phone_number, role, balance, created_at
+         FROM users
+         WHERE id = $1`,
+        [userResult.rows[0].id]
+      );
+    }
+
+    const safeUser = mapUser(userResult.rows[0]);
+    const accessToken = signAccessToken(safeUser);
+    const refreshTokenId = uuidv4();
+    const refreshToken = signRefreshToken(refreshTokenId, safeUser.id);
+
+    await query(
+      `INSERT INTO refresh_tokens (id, user_id, token, expires_at)
+       VALUES ($1, $2, $3, NOW() + INTERVAL '7 days')`,
+      [refreshTokenId, safeUser.id, refreshToken]
+    );
+
+    return res.json({ user: safeUser, token: accessToken, accessToken, refreshToken });
+  } catch {
+    return res.status(401).json({ error: "Google authentication failed" });
   }
 });
 

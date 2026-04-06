@@ -64,5 +64,10 @@ export const config = {
   oddsApiOddsPath: process.env.ODDS_API_ODDS_PATH || "/odds",
   footballLeague: process.env.FOOTBALL_LEAGUE || "epl",
   footballLeagues: process.env.FOOTBALL_LEAGUES || "",
-  footballMaxMatches: Number(process.env.FOOTBALL_MAX_MATCHES || 120)
+  footballMaxMatches: Number(process.env.FOOTBALL_MAX_MATCHES || 120),
+  googleClientId: process.env.GOOGLE_CLIENT_ID || "",
+  adminGoogleEmails: String(process.env.ADMIN_GOOGLE_EMAILS || "")
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean)
 };

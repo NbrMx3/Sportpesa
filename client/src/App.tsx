@@ -47,7 +47,8 @@ type TopNavKey =
 	| "jackpots"
 	| "luckyNumbers"
 	| "more"
-	| "apps";
+	| "apps"
+	| "admin";
 
 type HeroSlide = {
 	id: string;
@@ -69,6 +70,41 @@ type UserProfile = {
 	phoneNumber: string | null;
 	role: string;
 	balance: number;
+};
+
+type AdminOverview = {
+	users: number;
+	bets: number;
+	pendingBets: number;
+	wonBets: number;
+	payouts: number;
+	matches: number;
+};
+
+type AdminSignal = {
+	userId: string;
+	email: string;
+	withdrawalCount: number;
+	highStakeBets: number;
+	reason: string;
+};
+
+type AdminBet = {
+	id: string;
+	userId: string;
+	stake: number;
+	potentialWin: number;
+	status: string;
+	paidOut: boolean;
+};
+
+type AdminTransaction = {
+	id: string;
+	userId: string;
+	type: string;
+	status: string;
+	amount: number;
+	createdAt: string;
 };
 
 type ApiPayload = Record<string, unknown>;
@@ -111,7 +147,8 @@ const TOP_NAV_ITEMS: Array<{ key: TopNavKey; label: string; badge?: string; coun
 	{ key: "jackpots", label: "Jackpots", badge: "NEW" },
 	{ key: "luckyNumbers", label: "Lucky Numbers", count: 7 },
 	{ key: "more", label: "More", hasCaret: true },
-	{ key: "apps", label: "Apps", hasCaret: true }
+	{ key: "apps", label: "Apps", hasCaret: true },
+	{ key: "admin", label: "Admin" }
 ];
 
 const TOP_NAV_CONTENT: Record<TopNavKey, { heading: string; subtitle: string; cards: string[] }> = {
@@ -159,6 +196,11 @@ const TOP_NAV_CONTENT: Record<TopNavKey, { heading: string; subtitle: string; ca
 		heading: "Apps",
 		subtitle: "Install and play on mobile quickly",
 		cards: ["Android app", "Lite web app", "Install guide"]
+	},
+	admin: {
+		heading: "Admin Dashboard",
+		subtitle: "System control center with secured access",
+		cards: []
 	}
 };
 
@@ -401,16 +443,35 @@ function App() {
 	const [phoneNumber, setPhoneNumber] = useState("");
 	const [accessToken, setAccessToken] = useState("");
 	const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+	const [adminToken, setAdminToken] = useState("");
+	const [adminUser, setAdminUser] = useState<UserProfile | null>(null);
+	const [adminIdentifier, setAdminIdentifier] = useState("admin@sportpesa.local");
+	const [adminPassword, setAdminPassword] = useState("Admin123!");
+	const [googleIdToken, setGoogleIdToken] = useState("");
+	const [adminLoading, setAdminLoading] = useState(false);
+	const [adminError, setAdminError] = useState("");
+	const [adminMessage, setAdminMessage] = useState("");
+	const [adminOverview, setAdminOverview] = useState<AdminOverview | null>(null);
+	const [adminUsers, setAdminUsers] = useState<UserProfile[]>([]);
+	const [adminBets, setAdminBets] = useState<AdminBet[]>([]);
+	const [adminSignals, setAdminSignals] = useState<AdminSignal[]>([]);
+	const [adminTransactions, setAdminTransactions] = useState<AdminTransaction[]>([]);
+	const [adminMatchId, setAdminMatchId] = useState("");
+	const [adminResult, setAdminResult] = useState<Outcome>("home");
+	const [adminPayoutBetId, setAdminPayoutBetId] = useState("");
 	const [apiOnline, setApiOnline] = useState(true);
 	const isLoggedIn = Boolean(accessToken && currentUser);
 	const monthOptions = useMemo(() => buildMonthOptions(), []);
 	const otherSportsMatches = useMemo(() => buildOtherSportsMatches(selectedMonth), [selectedMonth]);
 	const localFootballMatches = useMemo(() => buildLocalFootballMatches(selectedMonth), [selectedMonth]);
 	const sportsbookView = activeTopNav === "sports" || activeTopNav === "liveGames";
+	const adminView = activeTopNav === "admin";
 
 	useEffect(() => {
 		const savedToken = localStorage.getItem("sportpesa_access_token") || "";
 		const savedUser = localStorage.getItem("sportpesa_user");
+		const savedAdminToken = localStorage.getItem("sportpesa_admin_token") || "";
+		const savedAdminUser = localStorage.getItem("sportpesa_admin_user");
 
 		if (savedToken) {
 			setAccessToken(savedToken);
@@ -423,7 +484,56 @@ function App() {
 				localStorage.removeItem("sportpesa_user");
 			}
 		}
+
+		if (savedAdminToken) {
+			setAdminToken(savedAdminToken);
+		}
+
+		if (savedAdminUser) {
+			try {
+				setAdminUser(JSON.parse(savedAdminUser));
+			} catch {
+				localStorage.removeItem("sportpesa_admin_user");
+			}
+		}
 	}, []);
+
+	async function fetchAdminData(token: string) {
+		const headers = {
+			Authorization: `Bearer ${token}`
+		};
+
+		const [overviewResponse, usersResponse, betsResponse, signalsResponse, transactionsResponse] =
+			await Promise.all([
+				fetch(`${API_BASE}/admin/overview`, { headers }),
+				fetch(`${API_BASE}/admin/users`, { headers }),
+				fetch(`${API_BASE}/admin/bets`, { headers }),
+				fetch(`${API_BASE}/admin/fraud-signals`, { headers }),
+				fetch(`${API_BASE}/admin/transactions`, { headers })
+			]);
+
+		const [overviewData, usersData, betsData, signalsData, transactionsData] = await Promise.all([
+			overviewResponse.json(),
+			usersResponse.json(),
+			betsResponse.json(),
+			signalsResponse.json(),
+			transactionsResponse.json()
+		]);
+
+		if (!overviewResponse.ok || !usersResponse.ok || !betsResponse.ok || !signalsResponse.ok || !transactionsResponse.ok) {
+			throw new Error("Failed to fetch one or more admin resources");
+		}
+
+		setAdminOverview((overviewData?.overview as AdminOverview) || null);
+		setAdminUsers(Array.isArray(usersData?.users) ? (usersData.users as UserProfile[]) : []);
+		setAdminBets(Array.isArray(betsData?.bets) ? (betsData.bets as AdminBet[]) : []);
+		setAdminSignals(Array.isArray(signalsData?.signals) ? (signalsData.signals as AdminSignal[]) : []);
+		setAdminTransactions(
+			Array.isArray(transactionsData?.transactions)
+				? (transactionsData.transactions as AdminTransaction[])
+				: []
+		);
+	}
 
 	useEffect(() => {
 		let mounted = true;
@@ -636,6 +746,25 @@ function App() {
 			setSelectedDate(matchDateKey(new Date().toISOString()));
 		}
 	}, [activeTopNav]);
+
+	useEffect(() => {
+		if (!adminView || !adminToken) {
+			return;
+		}
+
+		setAdminLoading(true);
+		setAdminError("");
+		fetchAdminData(adminToken)
+			.then(() => {
+				setAdminMessage((previous) => previous || "Admin dashboard ready.");
+			})
+			.catch((loadError) => {
+				setAdminError(loadError instanceof Error ? loadError.message : "Failed to load admin dashboard");
+			})
+			.finally(() => {
+				setAdminLoading(false);
+			});
+	}, [adminToken, adminView]);
 
 	useEffect(() => {
 		const timer = window.setInterval(() => {
@@ -904,6 +1033,198 @@ function App() {
 		}
 	}
 
+	async function handleAdminLogin(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		setAdminLoading(true);
+		setAdminError("");
+		setAdminMessage("");
+
+		try {
+			const response = await fetch(`${API_BASE}/auth/admin/login`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({
+					identifier: adminIdentifier,
+					password: adminPassword
+				})
+			});
+
+			const data = await parseJsonSafely(response);
+
+			if (!response.ok) {
+				throw new Error(getPayloadString(data, "error") || `Admin login failed (${response.status})`);
+			}
+
+			const token = getPayloadString(data, "accessToken") || getPayloadString(data, "token");
+			if (!token) {
+				throw new Error("Admin token not returned");
+			}
+
+			setAdminToken(token);
+			localStorage.setItem("sportpesa_admin_token", token);
+
+			const userPayload = data?.user;
+			if (isUserProfile(userPayload)) {
+				setAdminUser(userPayload);
+				localStorage.setItem("sportpesa_admin_user", JSON.stringify(userPayload));
+			}
+
+			await fetchAdminData(token);
+			setAdminMessage("Admin login successful.");
+		} catch (adminLoginError) {
+			setAdminError(adminLoginError instanceof Error ? adminLoginError.message : "Admin login failed");
+		} finally {
+			setAdminLoading(false);
+		}
+	}
+
+	async function handleAdminGoogleLogin(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		setAdminLoading(true);
+		setAdminError("");
+		setAdminMessage("");
+
+		try {
+			const response = await fetch(`${API_BASE}/auth/admin/google`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({
+					idToken: googleIdToken
+				})
+			});
+
+			const data = await parseJsonSafely(response);
+
+			if (!response.ok) {
+				throw new Error(getPayloadString(data, "error") || `Google admin login failed (${response.status})`);
+			}
+
+			const token = getPayloadString(data, "accessToken") || getPayloadString(data, "token");
+			if (!token) {
+				throw new Error("Admin token not returned");
+			}
+
+			setAdminToken(token);
+			localStorage.setItem("sportpesa_admin_token", token);
+
+			const userPayload = data?.user;
+			if (isUserProfile(userPayload)) {
+				setAdminUser(userPayload);
+				localStorage.setItem("sportpesa_admin_user", JSON.stringify(userPayload));
+			}
+
+			await fetchAdminData(token);
+			setAdminMessage("Admin Google login successful.");
+		} catch (googleAdminError) {
+			setAdminError(googleAdminError instanceof Error ? googleAdminError.message : "Google admin login failed");
+		} finally {
+			setAdminLoading(false);
+		}
+	}
+
+	async function refreshAdminDashboard() {
+		if (!adminToken) {
+			setAdminError("Admin token missing. Login again.");
+			return;
+		}
+
+		setAdminLoading(true);
+		setAdminError("");
+		try {
+			await fetchAdminData(adminToken);
+			setAdminMessage("Dashboard refreshed.");
+		} catch (refreshError) {
+			setAdminError(refreshError instanceof Error ? refreshError.message : "Failed to refresh admin dashboard");
+		} finally {
+			setAdminLoading(false);
+		}
+	}
+
+	async function handleAdminResultSubmit(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		if (!adminToken) {
+			setAdminError("Admin token missing. Login again.");
+			return;
+		}
+
+		setAdminLoading(true);
+		setAdminError("");
+		try {
+			const response = await fetch(`${API_BASE}/results`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${adminToken}`
+				},
+				body: JSON.stringify({
+					matchId: adminMatchId,
+					result: adminResult
+				})
+			});
+
+			const data = await parseJsonSafely(response);
+			if (!response.ok) {
+				throw new Error(getPayloadString(data, "error") || `Result update failed (${response.status})`);
+			}
+
+			setAdminMessage("Match result processed.");
+			await fetchAdminData(adminToken);
+		} catch (submitError) {
+			setAdminError(submitError instanceof Error ? submitError.message : "Failed to process result");
+		} finally {
+			setAdminLoading(false);
+		}
+	}
+
+	async function handleAdminPayout(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		if (!adminToken) {
+			setAdminError("Admin token missing. Login again.");
+			return;
+		}
+
+		setAdminLoading(true);
+		setAdminError("");
+		try {
+			const response = await fetch(`${API_BASE}/admin/payouts/${adminPayoutBetId}`, {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${adminToken}`
+				}
+			});
+
+			const data = await parseJsonSafely(response);
+			if (!response.ok) {
+				throw new Error(getPayloadString(data, "error") || `Admin payout failed (${response.status})`);
+			}
+
+			setAdminMessage("Admin payout processed.");
+			await fetchAdminData(adminToken);
+		} catch (payoutError) {
+			setAdminError(payoutError instanceof Error ? payoutError.message : "Failed to process admin payout");
+		} finally {
+			setAdminLoading(false);
+		}
+	}
+
+	function handleAdminLogout() {
+		setAdminToken("");
+		setAdminUser(null);
+		setAdminOverview(null);
+		setAdminUsers([]);
+		setAdminBets([]);
+		setAdminSignals([]);
+		setAdminTransactions([]);
+		setAdminMessage("Admin logged out.");
+		setAdminError("");
+		localStorage.removeItem("sportpesa_admin_token");
+		localStorage.removeItem("sportpesa_admin_user");
+	}
+
 	function handleLogout() {
 		setAccessToken("");
 		setCurrentUser(null);
@@ -956,40 +1277,57 @@ function App() {
 
 			<main className="content-grid">
 				<aside className="left-panel">
-					<h3>Football</h3>
-					<ul>
-						{FOOTBALL_MODULES.map((module) => (
-							<li key={module.key}>
-								<button
-									type="button"
-									className={`module-btn ${activeModule === module.key ? "active" : ""}`}
-									onClick={() => {
-										setActiveTopNav("sports");
-										setActiveModule(module.key);
-									}}
-								>
-									{module.label}
-								</button>
-							</li>
-						))}
-					</ul>
-					<h4>Other Sports</h4>
-					<ul>
-						{OTHER_SPORT_MODULES.map((module) => (
-							<li key={module.key}>
-								<button
-									type="button"
-									className={`module-btn ${activeModule === module.key ? "active" : ""}`}
-									onClick={() => {
-										setActiveTopNav("sports");
-										setActiveModule(module.key);
-									}}
-								>
-									{module.label}
-								</button>
-							</li>
-						))}
-					</ul>
+					{adminView ? (
+						<>
+							<h3>Admin Tools</h3>
+							<ul>
+								<li><button type="button" className="module-btn active">Overview</button></li>
+								<li><button type="button" className="module-btn">Users</button></li>
+								<li><button type="button" className="module-btn">Bets</button></li>
+								<li><button type="button" className="module-btn">Fraud Signals</button></li>
+								<li><button type="button" className="module-btn">Transactions</button></li>
+								<li><button type="button" className="module-btn">Results</button></li>
+								<li><button type="button" className="module-btn">Payouts</button></li>
+							</ul>
+						</>
+					) : (
+						<>
+							<h3>Football</h3>
+							<ul>
+								{FOOTBALL_MODULES.map((module) => (
+									<li key={module.key}>
+										<button
+											type="button"
+											className={`module-btn ${activeModule === module.key ? "active" : ""}`}
+											onClick={() => {
+												setActiveTopNav("sports");
+												setActiveModule(module.key);
+											}}
+										>
+											{module.label}
+										</button>
+									</li>
+								))}
+							</ul>
+							<h4>Other Sports</h4>
+							<ul>
+								{OTHER_SPORT_MODULES.map((module) => (
+									<li key={module.key}>
+										<button
+											type="button"
+											className={`module-btn ${activeModule === module.key ? "active" : ""}`}
+											onClick={() => {
+												setActiveTopNav("sports");
+												setActiveModule(module.key);
+											}}
+										>
+											{module.label}
+										</button>
+									</li>
+								))}
+							</ul>
+						</>
+					)}
 				</aside>
 
 				<section className="center-panel">
@@ -1029,7 +1367,162 @@ function App() {
 						</div>
 					</div>
 
-					{!sportsbookView && (
+					{adminView && (
+						<section className="admin-dashboard">
+							<h3>Admin Dashboard</h3>
+							<p>Secure control center for platform operations.</p>
+
+							<div className="admin-auth-grid">
+								<form className="admin-card" onSubmit={handleAdminLogin}>
+									<h4>Admin Login (JWT)</h4>
+									<input
+										type="text"
+										placeholder="Admin email or phone"
+										value={adminIdentifier}
+										onChange={(event) => setAdminIdentifier(event.target.value)}
+										required
+									/>
+									<input
+										type="password"
+										placeholder="Admin password"
+										value={adminPassword}
+										onChange={(event) => setAdminPassword(event.target.value)}
+										required
+									/>
+									<button type="submit" disabled={adminLoading}>{adminLoading ? "Signing in..." : "Sign In"}</button>
+								</form>
+
+								<form className="admin-card" onSubmit={handleAdminGoogleLogin}>
+									<h4>Google Admin Login</h4>
+									<input
+										type="text"
+										placeholder="Google ID token"
+										value={googleIdToken}
+										onChange={(event) => setGoogleIdToken(event.target.value)}
+										required
+									/>
+									<button type="submit" disabled={adminLoading}>{adminLoading ? "Verifying..." : "Login with Google"}</button>
+								</form>
+							</div>
+
+							{adminError && <p className="error-text">{adminError}</p>}
+							{adminMessage && <p className="status-text">{adminMessage}</p>}
+
+							{adminToken && (
+								<>
+									<div className="admin-panel-grid">
+										<div className="admin-card">
+											<h4>Session</h4>
+											<p>{adminUser ? `Admin: ${adminUser.fullName}` : "Authenticated"}</p>
+											<button type="button" onClick={refreshAdminDashboard} disabled={adminLoading}>Refresh Data</button>
+											<button type="button" onClick={handleAdminLogout}>Admin Logout</button>
+										</div>
+
+										<div className="admin-card">
+											<h4>Overview</h4>
+											<p>Users: {adminOverview?.users ?? 0}</p>
+											<p>Bets: {adminOverview?.bets ?? 0}</p>
+											<p>Pending Bets: {adminOverview?.pendingBets ?? 0}</p>
+											<p>Won Bets: {adminOverview?.wonBets ?? 0}</p>
+											<p>Payouts: {adminOverview?.payouts ?? 0}</p>
+											<p>Matches: {adminOverview?.matches ?? 0}</p>
+										</div>
+
+										<form className="admin-card" onSubmit={handleAdminResultSubmit}>
+											<h4>Process Match Result</h4>
+											<input
+												type="text"
+												placeholder="Match ID"
+												value={adminMatchId}
+												onChange={(event) => setAdminMatchId(event.target.value)}
+												required
+											/>
+											<select value={adminResult} onChange={(event) => setAdminResult(event.target.value as Outcome)}>
+												<option value="home">Home</option>
+												<option value="draw">Draw</option>
+												<option value="away">Away</option>
+											</select>
+											<button type="submit" disabled={adminLoading}>Submit Result</button>
+										</form>
+
+										<form className="admin-card" onSubmit={handleAdminPayout}>
+											<h4>Force Payout (Admin)</h4>
+											<input
+												type="text"
+												placeholder="Won Bet ID"
+												value={adminPayoutBetId}
+												onChange={(event) => setAdminPayoutBetId(event.target.value)}
+												required
+											/>
+											<button type="submit" disabled={adminLoading}>Process Payout</button>
+										</form>
+									</div>
+
+									<div className="admin-table-grid">
+									<section className="admin-card">
+										<h4>Users ({adminUsers.length})</h4>
+										<div className="admin-table-wrap">
+											<table>
+												<thead>
+													<tr><th>Name</th><th>Email</th><th>Role</th><th>Balance</th></tr>
+												</thead>
+												<tbody>
+													{adminUsers.slice(0, 20).map((user) => (
+														<tr key={user.id}><td>{user.fullName}</td><td>{user.email}</td><td>{user.role}</td><td>{user.balance.toFixed(2)}</td></tr>
+													))}
+												</tbody>
+											</table>
+										</div>
+									</section>
+
+									<section className="admin-card">
+										<h4>Bets ({adminBets.length})</h4>
+										<div className="admin-table-wrap">
+											<table>
+												<thead>
+													<tr><th>Bet ID</th><th>User</th><th>Stake</th><th>Status</th><th>Paid</th></tr>
+												</thead>
+												<tbody>
+													{adminBets.slice(0, 20).map((bet) => (
+														<tr key={bet.id}><td>{bet.id}</td><td>{bet.userId}</td><td>{bet.stake.toFixed(2)}</td><td>{bet.status}</td><td>{bet.paidOut ? "Yes" : "No"}</td></tr>
+													))}
+												</tbody>
+											</table>
+										</div>
+									</section>
+
+									<section className="admin-card">
+										<h4>Fraud Signals ({adminSignals.length})</h4>
+										<ul className="admin-signal-list">
+											{adminSignals.slice(0, 12).map((signal) => (
+												<li key={signal.userId}>{signal.email} | withdrawals {signal.withdrawalCount} | high stake bets {signal.highStakeBets}</li>
+											))}
+											{!adminSignals.length && <li>No active fraud signals.</li>}
+										</ul>
+									</section>
+
+									<section className="admin-card">
+										<h4>Transactions ({adminTransactions.length})</h4>
+										<div className="admin-table-wrap">
+											<table>
+												<thead>
+													<tr><th>Type</th><th>User</th><th>Amount</th><th>Status</th><th>Date</th></tr>
+												</thead>
+												<tbody>
+													{adminTransactions.slice(0, 20).map((txn) => (
+														<tr key={txn.id}><td>{txn.type}</td><td>{txn.userId}</td><td>{txn.amount.toFixed(2)}</td><td>{txn.status}</td><td>{formatKickoff(txn.createdAt)}</td></tr>
+													))}
+												</tbody>
+											</table>
+										</div>
+									</section>
+									</div>
+								</>
+							)}
+						</section>
+					)}
+
+					{!adminView && !sportsbookView && (
 						<section className="product-panel">
 							<h3>{topNavContent.heading}</h3>
 							<p>{topNavContent.subtitle}</p>
@@ -1044,7 +1537,7 @@ function App() {
 						</section>
 					)}
 
-					{sportsbookView && (
+					{!adminView && sportsbookView && (
 						<>
 
 					<div className="filter-bar">
