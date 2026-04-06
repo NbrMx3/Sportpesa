@@ -150,6 +150,12 @@ body {
 	font-weight: 900;
 }
 
+.top-nav-caret {
+	font-style: normal;
+	font-size: 0.72rem;
+	opacity: 0.85;
+}
+
 .top-nav-badge {
 	background: #ff3a35;
 	color: #fff;

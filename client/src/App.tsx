@@ -38,7 +38,16 @@ type ModuleKey =
 	| "mma"
 	| "americanFootball";
 
-type TopNavKey = "sports" | "liveGames" | "aviator" | "casino" | "jackpots" | "more";
+type TopNavKey =
+	| "sports"
+	| "liveGames"
+	| "aviator"
+	| "casino"
+	| "virtuals"
+	| "jackpots"
+	| "luckyNumbers"
+	| "more"
+	| "apps";
 
 type BetSelection = {
 	matchId: string;
@@ -87,13 +96,16 @@ const OTHER_SPORT_MODULES: Array<{ key: ModuleKey; label: string }> = [
 	{ key: "americanFootball", label: "American Football" }
 ];
 
-const TOP_NAV_ITEMS: Array<{ key: TopNavKey; label: string; badge?: string; count?: number }> = [
+const TOP_NAV_ITEMS: Array<{ key: TopNavKey; label: string; badge?: string; count?: number; hasCaret?: boolean }> = [
 	{ key: "sports", label: "Sports" },
 	{ key: "liveGames", label: "Live Games" },
 	{ key: "aviator", label: "Aviator", badge: "NEW" },
 	{ key: "casino", label: "Casino", count: 1 },
+	{ key: "virtuals", label: "Virtuals" },
 	{ key: "jackpots", label: "Jackpots", badge: "NEW" },
-	{ key: "more", label: "More" }
+	{ key: "luckyNumbers", label: "Lucky Numbers", count: 7 },
+	{ key: "more", label: "More", hasCaret: true },
+	{ key: "apps", label: "Apps", hasCaret: true }
 ];
 
 const TOP_NAV_CONTENT: Record<TopNavKey, { heading: string; subtitle: string; cards: string[] }> = {
@@ -117,15 +129,30 @@ const TOP_NAV_CONTENT: Record<TopNavKey, { heading: string; subtitle: string; ca
 		subtitle: "Table games and slots in one place",
 		cards: ["Blackjack and Roulette", "Instant spins", "Daily bonus drops"]
 	},
+	virtuals: {
+		heading: "Virtuals",
+		subtitle: "Fast virtual football and racing action",
+		cards: ["Virtual Football", "Instant Keno", "Rapid race markets"]
+	},
 	jackpots: {
 		heading: "Jackpots",
 		subtitle: "Multi-level jackpots and pooled prizes",
 		cards: ["Mega weekly draws", "Pick-8 style entries", "Low stake, high ceiling"]
 	},
+	luckyNumbers: {
+		heading: "Lucky Numbers",
+		subtitle: "Draw-based play with scheduled number drops",
+		cards: ["5-min draws", "Auto pick", "Quick results feed"]
+	},
 	more: {
 		heading: "More",
 		subtitle: "Extra products and promos",
 		cards: ["Lucky Numbers", "Virtuals", "Campaign hub"]
+	},
+	apps: {
+		heading: "Apps",
+		subtitle: "Install and play on mobile quickly",
+		cards: ["Android app", "Lite web app", "Install guide"]
 	}
 };
 
@@ -884,6 +911,7 @@ function App() {
 						<span>{item.label}</span>
 						{item.badge && <em className="top-nav-badge">{item.badge}</em>}
 						{typeof item.count === "number" && <em className="top-nav-count">{item.count}</em>}
+						{item.hasCaret && <em className="top-nav-caret">▾</em>}
 					</button>
 				))}
 			</nav>
