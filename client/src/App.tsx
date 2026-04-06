@@ -36,6 +36,53 @@ type ApiPayload = Record<string, unknown>;
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 const SOCKET_BASE = import.meta.env.VITE_SOCKET_BASE || "";
 
+function toMonthInputValue(date = new Date()) {
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, "0");
+	return `${year}-${month}`;
+}
+
+function getMonthRange(monthValue: string) {
+	const [yearRaw, monthRaw] = monthValue.split("-");
+	const year = Number(yearRaw);
+	const month = Number(monthRaw);
+
+	if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+		const now = new Date();
+		return getMonthRange(toMonthInputValue(now));
+	}
+
+	const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+	const end = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+
+	return {
+		from: start.toISOString(),
+		to: end.toISOString()
+	};
+}
+
+function buildMonthOptions(rangeMonths = 12) {
+	const options: Array<{ value: string; label: string }> = [];
+	const now = new Date();
+
+	for (let offset = 0; offset < rangeMonths; offset += 1) {
+		const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+		const value = toMonthInputValue(date);
+		const label = date.toLocaleDateString("en-KE", {
+			month: "long",
+			year: "numeric"
+		});
+
+		options.push({ value, label });
+	}
+
+	return options;
+}
+
+function matchDateKey(dateString: string) {
+	return dateString.slice(0, 10);
+}
+
 function formatKickoff(dateString: string) {
 	const date = new Date(dateString);
 	return date.toLocaleString("en-KE", {
@@ -91,6 +138,8 @@ function App() {
 	const [stake, setStake] = useState("100");
 	const [error, setError] = useState("");
 	const [liveStatus, setLiveStatus] = useState("Connecting...");
+	const [selectedMonth, setSelectedMonth] = useState(toMonthInputValue);
+	const [selectedDate, setSelectedDate] = useState("all");
 	const [authError, setAuthError] = useState("");
 	const [authMessage, setAuthMessage] = useState("");
 	const [authMode, setAuthMode] = useState<"login" | "register">("login");
@@ -103,6 +152,7 @@ function App() {
 	const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 	const [apiOnline, setApiOnline] = useState(true);
 	const isLoggedIn = Boolean(accessToken && currentUser);
+	const monthOptions = useMemo(() => buildMonthOptions(), []);
 
 	useEffect(() => {
 		const savedToken = localStorage.getItem("sportpesa_access_token") || "";
@@ -123,6 +173,13 @@ function App() {
 
 	useEffect(() => {
 		let mounted = true;
+		const monthRange = getMonthRange(selectedMonth);
+		const params = new URLSearchParams({
+			from: monthRange.from,
+			to: monthRange.to,
+			limit: "300"
+		});
+		const queryString = params.toString();
 
 		async function checkApiOnline() {
 			try {
@@ -141,7 +198,7 @@ function App() {
 			try {
 				setLoading(true);
 				await checkApiOnline();
-				const footballResponse = await fetch(`${API_BASE}/football/matches`);
+				const footballResponse = await fetch(`${API_BASE}/football/matches?${queryString}`);
 				const footballData = await footballResponse.json();
 
 				if (!footballResponse.ok) {
@@ -159,7 +216,7 @@ function App() {
 				}
 			} catch {
 				try {
-					const fallbackResponse = await fetch(`${API_BASE}/matches`);
+					const fallbackResponse = await fetch(`${API_BASE}/matches?${queryString}`);
 					const fallbackData = await fallbackResponse.json();
 
 					if (!fallbackResponse.ok) {
@@ -189,10 +246,17 @@ function App() {
 		return () => {
 			mounted = false;
 		};
-	}, []);
+	}, [selectedMonth]);
 
 	useEffect(() => {
 		let mounted = true;
+		const monthRange = getMonthRange(selectedMonth);
+		const params = new URLSearchParams({
+			from: monthRange.from,
+			to: monthRange.to,
+			limit: "300"
+		});
+		const queryString = params.toString();
 
 		if (!apiOnline) {
 			setLiveStatus("API offline. Start server on port 5001");
@@ -203,7 +267,7 @@ function App() {
 
 		async function refreshFootballOdds() {
 			try {
-				const response = await fetch(`${API_BASE}/football/odds`);
+				const response = await fetch(`${API_BASE}/football/odds?${queryString}`);
 				const data = await response.json();
 
 				if (!response.ok) {
@@ -288,7 +352,31 @@ function App() {
 			window.clearInterval(pollId);
 			socket.disconnect();
 		};
-	}, [apiOnline]);
+	}, [apiOnline, selectedMonth]);
+
+	useEffect(() => {
+		setSelectedDate("all");
+	}, [selectedMonth]);
+
+	const availableDates = useMemo(() => {
+		const byDate = new Set<string>();
+
+		for (const match of matches) {
+			if (typeof match.startTime === "string" && match.startTime.length >= 10) {
+				byDate.add(matchDateKey(match.startTime));
+			}
+		}
+
+		return Array.from(byDate).sort((a, b) => a.localeCompare(b));
+	}, [matches]);
+
+	const visibleMatches = useMemo(() => {
+		if (selectedDate === "all") {
+			return matches;
+		}
+
+		return matches.filter((match) => matchDateKey(match.startTime) === selectedDate);
+	}, [matches, selectedDate]);
 
 	const betslip = useMemo(() => Object.values(activeSelection), [activeSelection]);
 
@@ -493,8 +581,45 @@ function App() {
 						</div>
 					</div>
 
+					<div className="filter-bar">
+						<label htmlFor="month-filter">Month</label>
+						<select
+							id="month-filter"
+							value={selectedMonth}
+							onChange={(event) => setSelectedMonth(event.target.value)}
+						>
+							{monthOptions.map((option) => (
+								<option value={option.value} key={option.value}>
+									{option.label}
+								</option>
+							))}
+						</select>
+
+						<label htmlFor="date-filter">Date</label>
+						<select
+							id="date-filter"
+							value={selectedDate}
+							onChange={(event) => setSelectedDate(event.target.value)}
+						>
+							<option value="all">All dates</option>
+							{availableDates.map((dateValue) => (
+								<option value={dateValue} key={dateValue}>
+									{new Date(`${dateValue}T00:00:00Z`).toLocaleDateString("en-KE", {
+										weekday: "short",
+										day: "2-digit",
+										month: "short",
+										year: "numeric"
+									})}
+								</option>
+							))}
+						</select>
+					</div>
+
 					{error && <p className="error-text">{error}</p>}
 					{loading && <p className="status-text">Loading matches...</p>}
+					{!loading && !visibleMatches.length && (
+						<p className="status-text">No matches for the selected month/date.</p>
+					)}
 
 					<div className="odds-table">
 						<div className="odds-head">
@@ -504,7 +629,7 @@ function App() {
 							<span>2</span>
 						</div>
 
-						{matches.map((match) => (
+						{visibleMatches.map((match) => (
 							<div className="odds-row" key={match.id}>
 								<div className="fixture-cell">
 									<small>{formatKickoff(match.startTime)} | {match.league}</small>
