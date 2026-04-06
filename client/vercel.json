@@ -4,6 +4,22 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "https://sportpesa-api.onrender.com/api/$1"
+    },
+    {
+      "source": "/api",
+      "destination": "https://sportpesa-api.onrender.com/api/health"
+    },
+    {
+      "source": "/socket.io/(.*)",
+      "destination": "https://sportpesa-api.onrender.com/socket.io/$1"
+    },
+    {
+      "source": "/socket.io",
+      "destination": "https://sportpesa-api.onrender.com/socket.io"
+    },
+    {
       "source": "/favicon.ico",
       "destination": "/sport.svg"
     },
