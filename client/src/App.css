@@ -20,6 +20,7 @@ body {
 	background: linear-gradient(180deg, var(--bg), var(--bg-deep));
 	color: var(--text);
 	font-family: "Segoe UI", Tahoma, sans-serif;
+	overflow-x: hidden;
 }
 
 .page-shell {
@@ -61,6 +62,130 @@ body {
 	align-items: center;
 }
 
+.top-actions.logged-in {
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 0.18rem;
+}
+
+.top-actions.logged-out {
+	flex-direction: row;
+}
+
+.account-shortcuts {
+	display: flex;
+	align-items: center;
+	gap: 0.18rem;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+}
+
+.top-actions .header-link-btn {
+	border: 0;
+	background: transparent;
+	color: #f0f7ff;
+	padding: 0.12rem 0.36rem;
+	font-size: 0.98rem;
+	font-weight: 800;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.24rem;
+	opacity: 0.95;
+	text-transform: none;
+}
+
+.top-actions .header-link-btn span {
+	font-size: 0.88rem;
+	opacity: 0.82;
+}
+
+.top-actions .header-link-btn:hover {
+	opacity: 1;
+	text-decoration: underline;
+}
+
+.header-utility {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 0.32rem;
+	flex-wrap: wrap;
+}
+
+.header-balance-chip {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.28rem 0.56rem;
+	background: #ffbf18;
+	color: #13212e;
+	font-size: 1.2rem;
+	font-weight: 900;
+	border-radius: 8px;
+	letter-spacing: 0.2px;
+}
+
+.header-balance-btn {
+	border: 0;
+	cursor: pointer;
+}
+
+.header-balance-btn:hover {
+	filter: brightness(1.03);
+}
+
+.header-language-menu {
+	position: relative;
+}
+
+.language-menu-dropdown {
+	position: absolute;
+	right: 0;
+	top: calc(100% + 0.25rem);
+	display: grid;
+	min-width: 140px;
+	background: #0f283a;
+	border: 1px solid #325a74;
+	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+	z-index: 20;
+}
+
+.language-option {
+	border: 0;
+	background: transparent;
+	color: #deebf7;
+	padding: 0.48rem 0.64rem;
+	text-align: left;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.language-option:hover {
+	background: #1a4562;
+}
+
+.language-option.active {
+	background: #20536f;
+	color: #ffffff;
+}
+
+.top-actions .header-utility-btn {
+	border: 0;
+	background: transparent;
+	color: #e8f2fb;
+	padding: 0.15rem 0.36rem;
+	font-size: 0.94rem;
+	font-weight: 800;
+	text-transform: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+.top-actions .header-utility-btn:hover {
+	text-decoration: underline;
+}
+
 .top-actions button {
 	border: 1px solid #2d4a62;
 	background: #102538;
@@ -89,8 +214,8 @@ body {
 	flex-direction: column;
 	background: #14324a;
 	border: 1px solid #2f627e;
-	padding: 0.35rem 0.62rem;
-	min-width: 180px;
+	padding: 0.28rem 0.55rem;
+	min-width: 170px;
 }
 
 .session-pill span {
@@ -101,7 +226,7 @@ body {
 }
 
 .session-pill strong {
-	font-size: 0.87rem;
+	font-size: 0.82rem;
 	line-height: 1.1;
 }
 
@@ -112,6 +237,7 @@ body {
 	border-bottom: 1px solid #335067;
 	padding: 0.2rem 0.6rem 0;
 	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
 }
 
 .top-nav-btn {
@@ -475,6 +601,145 @@ body {
 	text-align: left;
 }
 
+.account-details-shell {
+	border: 1px solid #2d485e;
+	background: #e8ecef;
+	color: #0d1e2c;
+}
+
+.account-details-header {
+	padding: 0.72rem 0.95rem;
+	background: #041729;
+	color: #ffffff;
+	text-transform: uppercase;
+	font-size: 1rem;
+	font-weight: 900;
+	letter-spacing: 0.15em;
+}
+
+.account-details-form {
+	display: grid;
+	gap: 1rem;
+	padding: 1rem;
+}
+
+.account-details-block {
+	display: grid;
+	gap: 0.42rem;
+}
+
+.account-details-block h4 {
+	margin: 0;
+	font-size: 2rem;
+	line-height: 1.1;
+	color: #0b2f7f;
+	text-transform: none;
+}
+
+.settings-helper {
+	margin: 0 0 0.45rem;
+	font-size: 1rem;
+	line-height: 1.35;
+	color: #162e49;
+}
+
+.account-details-form label {
+	font-size: 1.15rem;
+	font-weight: 800;
+	color: #132e8a;
+}
+
+.account-details-form input {
+	padding: 0.62rem 0.7rem;
+	border: 1px solid #b6bec6;
+	border-radius: 6px;
+	background: #f8fafc;
+	color: #16212b;
+	font-size: 1rem;
+}
+
+.settings-login-row {
+	display: grid;
+	grid-template-columns: minmax(220px, 330px) auto;
+	gap: 0.65rem;
+	align-items: end;
+	max-width: 540px;
+}
+
+.settings-secondary-btn {
+	height: 48px;
+	padding: 0 1rem;
+	border: 1px solid #afb7c0;
+	border-radius: 8px;
+	background: #f2f4f6;
+	color: #203652;
+	font-size: 1.05rem;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.settings-secondary-btn:hover {
+	background: #e9edf2;
+}
+
+.settings-divider {
+	height: 1px;
+	background: #bcc5ce;
+	margin: 0.3rem 0 0.2rem;
+}
+
+.settings-columns {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: 1rem;
+}
+
+.settings-row-two {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: 0.65rem;
+}
+
+.settings-row-two > div {
+	display: grid;
+	gap: 0.42rem;
+}
+
+.settings-contact-block {
+	max-width: 560px;
+	padding-top: 0.2rem;
+}
+
+.settings-save-row {
+	display: flex;
+	justify-content: center;
+	padding: 0.45rem 0 0.85rem;
+}
+
+.settings-save-btn {
+	min-width: 190px;
+	padding: 0.85rem 1.5rem;
+	border: 0;
+	border-radius: 12px;
+	background: #5988a8;
+	color: #ffffff;
+	font-weight: 900;
+	font-size: 1.05rem;
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+	box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22);
+	cursor: pointer;
+}
+
+.settings-save-btn:hover {
+	background: #4d7c9b;
+}
+
+.settings-save-btn:disabled {
+	opacity: 0.65;
+	cursor: not-allowed;
+}
+
 .content-grid {
 	display: grid;
 	grid-template-columns: 235px 1fr 420px;
@@ -705,12 +970,14 @@ body {
 .odds-table {
 	border: 1px solid #264b64;
 	background: #152c3f;
+	overflow-x: auto;
 }
 
 .odds-head,
 .odds-row {
 	display: grid;
 	grid-template-columns: minmax(250px, 1fr) 102px 102px 102px;
+	min-width: 560px;
 }
 
 .odds-head {
@@ -876,7 +1143,8 @@ body {
 }
 
 .right-panel input {
-	width: calc(100% - 1.7rem);
+	width: auto;
+	display: block;
 	margin: 0 0.85rem;
 	padding: 0.7rem;
 	border: 1px solid #436684;
@@ -939,6 +1207,15 @@ body {
 }
 
 @media (max-width: 1200px) {
+	.top-header {
+		align-items: flex-start;
+		gap: 0.55rem;
+	}
+
+	.top-actions.logged-in {
+		align-items: flex-end;
+	}
+
 	.content-grid {
 		grid-template-columns: 210px 1fr;
 	}
@@ -948,9 +1225,70 @@ body {
 	}
 }
 
+@media (max-width: 1024px) {
+	.brand-block h1 {
+		font-size: 2.45rem;
+	}
+
+	.brand-block span {
+		font-size: 1.05rem;
+	}
+
+	.top-actions.logged-in {
+		gap: 0.3rem;
+	}
+
+	.top-nav-btn {
+		font-size: 0.95rem;
+		padding: 0.56rem 0.72rem 0.5rem;
+	}
+
+	.account-summary-box strong {
+		font-size: 1.55rem;
+	}
+
+	.account-details-block h4 {
+		font-size: 1.65rem;
+	}
+
+	.account-details-form label {
+		font-size: 1rem;
+	}
+}
+
 @media (max-width: 880px) {
+	.page-shell {
+		max-width: 100%;
+		box-shadow: none;
+	}
+
+	.top-header {
+		flex-direction: column;
+		align-items: flex-start;
+		padding: 0.62rem 0.68rem;
+	}
+
+	.top-actions.logged-in,
+	.top-actions.logged-out {
+		width: 100%;
+		align-items: flex-start;
+	}
+
+	.header-utility,
+	.account-shortcuts {
+		width: 100%;
+		justify-content: flex-start;
+	}
+
+	.language-menu-dropdown {
+		left: 0;
+		right: auto;
+	}
+
 	.content-grid {
 		grid-template-columns: 1fr;
+		padding: 0.52rem;
+		gap: 0.52rem;
 	}
 
 	.left-panel,
@@ -965,7 +1303,16 @@ body {
 
 	.odds-head,
 	.odds-row {
-		grid-template-columns: minmax(150px, 1fr) 82px 82px 82px;
+		grid-template-columns: minmax(180px, 1fr) 84px 84px 84px;
+		min-width: 450px;
+	}
+
+	.fixture-cell strong {
+		font-size: 1.05rem;
+	}
+
+	.odd-btn {
+		font-size: 1rem;
 	}
 
 	.hero-carousel {
@@ -980,6 +1327,26 @@ body {
 
 	.filter-bar {
 		grid-template-columns: 1fr;
+		padding: 0.58rem;
+	}
+
+	.settings-columns,
+	.settings-row-two {
+		grid-template-columns: 1fr;
+	}
+
+	.settings-login-row {
+		grid-template-columns: 1fr;
+		max-width: none;
+	}
+
+	.account-details-block h4 {
+		font-size: 1.55rem;
+	}
+
+	.settings-save-btn {
+		width: 100%;
+		max-width: 320px;
 	}
 
 	.filter-bar label {
@@ -999,6 +1366,20 @@ body {
 		justify-content: flex-end;
 	}
 
+	.top-actions.logged-in {
+		gap: 0.28rem;
+	}
+
+	.top-actions .header-link-btn,
+	.top-actions .header-utility-btn {
+		font-size: 0.86rem;
+	}
+
+	.header-balance-chip {
+		font-size: 0.84rem;
+		padding: 0.2rem 0.42rem;
+	}
+
 	.product-grid {
 		grid-template-columns: 1fr;
 	}
@@ -1011,5 +1392,112 @@ body {
 
 	.session-pill {
 		min-width: 145px;
+	}
+}
+
+@media (max-width: 620px) {
+	.brand-block h1 {
+		font-size: 1.95rem;
+	}
+
+	.brand-block span {
+		font-size: 0.8rem;
+		padding: 0.1rem 0.3rem;
+	}
+
+	.top-actions .header-link-btn,
+	.top-actions .header-utility-btn {
+		font-size: 0.8rem;
+		padding: 0.12rem 0.2rem;
+	}
+
+	.header-balance-chip {
+		font-size: 0.78rem;
+		padding: 0.18rem 0.35rem;
+	}
+
+	.main-nav {
+		padding: 0.15rem 0.25rem 0;
+	}
+
+	.top-nav-btn {
+		font-size: 0.86rem;
+		padding: 0.5rem 0.52rem 0.46rem;
+	}
+
+	.left-panel h3,
+	.left-panel h4 {
+		font-size: 0.92rem;
+	}
+
+	.module-btn,
+	.account-module-btn {
+		font-size: 0.95rem;
+	}
+
+	.payment-methods {
+		display: grid;
+		grid-template-columns: 1fr;
+	}
+
+	.payment-methods button {
+		width: 100%;
+	}
+
+	.account-details-form {
+		padding: 0.7rem;
+		gap: 0.78rem;
+	}
+
+	.account-details-header {
+		font-size: 0.82rem;
+		letter-spacing: 0.09em;
+	}
+
+	.account-details-block h4 {
+		font-size: 1.28rem;
+	}
+
+	.account-details-form label {
+		font-size: 0.96rem;
+	}
+
+	.settings-helper {
+		font-size: 0.92rem;
+	}
+
+	.settings-secondary-btn {
+		width: 100%;
+	}
+
+	.settings-contact-block {
+		max-width: 100%;
+	}
+
+	.right-panel h3 {
+		font-size: 1rem;
+	}
+
+	.auth-card,
+	.care-box {
+		margin-left: 0.55rem;
+		margin-right: 0.55rem;
+	}
+
+	.right-panel input,
+	.place-btn {
+		margin-left: 0.55rem;
+		margin-right: 0.55rem;
+		width: calc(100% - 1.1rem);
+	}
+
+	.calc-row,
+	.right-panel label,
+	.session-state,
+	.status-text,
+	.error-text,
+	.betslip-items {
+		margin-left: 0.55rem;
+		margin-right: 0.55rem;
 	}
 }

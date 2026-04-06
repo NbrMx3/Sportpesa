@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { io, type Socket } from "socket.io-client";
 import "./App.css";
 
@@ -109,6 +109,28 @@ type AdminTransaction = {
 type AdminToolKey = "overview" | "users" | "bets" | "fraud" | "transactions" | "results" | "payouts";
 
 type AccountToolKey = "deposit" | "withdraw" | "betHistory" | "transactionHistory" | "settings" | "selfExclusion";
+type LanguageCode = "en" | "sw";
+
+type AccountDetailsForm = {
+	mobileNumber: string;
+	firstName: string;
+	middleName: string;
+	lastName: string;
+	dateOfBirth: string;
+	idNumber: string;
+	occupation: string;
+	villageStreet: string;
+	streetNumber: string;
+	block: string;
+	city: string;
+	county: string;
+	subCounty: string;
+	postalAddress: string;
+	postalCode: string;
+	emailAddress: string;
+	altMobile1: string;
+	altMobile2: string;
+};
 
 type AccountTransaction = {
 	id: string;
@@ -491,7 +513,63 @@ function App() {
 	const [selfExclusionEnabled, setSelfExclusionEnabled] = useState(false);
 	const [accountTransactions, setAccountTransactions] = useState<AccountTransaction[]>([]);
 	const [accountBets, setAccountBets] = useState<MyBet[]>([]);
+	const [accountDetailsForm, setAccountDetailsForm] = useState<AccountDetailsForm>(() => {
+		try {
+			const stored = localStorage.getItem("sportpesa_account_details");
+			if (stored) {
+				const parsed = JSON.parse(stored) as Partial<AccountDetailsForm>;
+				return {
+					mobileNumber: parsed.mobileNumber || "",
+					firstName: parsed.firstName || "",
+					middleName: parsed.middleName || "",
+					lastName: parsed.lastName || "",
+					dateOfBirth: parsed.dateOfBirth || "",
+					idNumber: parsed.idNumber || "",
+					occupation: parsed.occupation || "",
+					villageStreet: parsed.villageStreet || "",
+					streetNumber: parsed.streetNumber || "",
+					block: parsed.block || "",
+					city: parsed.city || "",
+					county: parsed.county || "",
+					subCounty: parsed.subCounty || "",
+					postalAddress: parsed.postalAddress || "",
+					postalCode: parsed.postalCode || "",
+					emailAddress: parsed.emailAddress || "",
+					altMobile1: parsed.altMobile1 || "",
+					altMobile2: parsed.altMobile2 || ""
+				};
+			}
+		} catch {
+			// Keep default values when persisted data cannot be parsed.
+		}
+
+		return {
+			mobileNumber: "",
+			firstName: "",
+			middleName: "",
+			lastName: "",
+			dateOfBirth: "",
+			idNumber: "",
+			occupation: "",
+			villageStreet: "",
+			streetNumber: "",
+			block: "",
+			city: "",
+			county: "",
+			subCounty: "",
+			postalAddress: "",
+			postalCode: "",
+			emailAddress: "",
+			altMobile1: "",
+			altMobile2: ""
+		};
+	});
 	const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+	const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>(() => {
+		const stored = localStorage.getItem("sportpesa_language");
+		return stored === "sw" ? "sw" : "en";
+	});
+	const [showLanguageMenu, setShowLanguageMenu] = useState(false);
 	const [adminLoading, setAdminLoading] = useState(false);
 	const [adminError, setAdminError] = useState("");
 	const [adminMessage, setAdminMessage] = useState("");
@@ -505,6 +583,7 @@ function App() {
 	const [adminResult, setAdminResult] = useState<Outcome>("home");
 	const [adminPayoutBetId, setAdminPayoutBetId] = useState("");
 	const [apiOnline, setApiOnline] = useState(true);
+	const languageMenuRef = useRef<HTMLDivElement | null>(null);
 	const isLoggedIn = Boolean(accessToken && currentUser);
 	const isAdminUser = currentUser?.role === "admin";
 	const monthOptions = useMemo(() => buildMonthOptions(), []);
@@ -541,6 +620,44 @@ function App() {
 				localStorage.removeItem("sportpesa_user");
 			}
 		}
+	}, []);
+
+	useEffect(() => {
+		if (!currentUser) {
+			return;
+		}
+
+		const names = currentUser.fullName.trim().split(/\s+/).filter(Boolean);
+		const first = names[0] || "";
+		const last = names.length > 1 ? names[names.length - 1] : "";
+
+		setAccountDetailsForm((previous) => ({
+			...previous,
+			mobileNumber: previous.mobileNumber || currentUser.phoneNumber || "",
+			emailAddress: previous.emailAddress || currentUser.email || "",
+			firstName: previous.firstName || first,
+			lastName: previous.lastName || last
+		}));
+	}, [currentUser]);
+
+	useEffect(() => {
+		localStorage.setItem("sportpesa_language", selectedLanguage);
+		document.documentElement.lang = selectedLanguage === "sw" ? "sw" : "en";
+	}, [selectedLanguage]);
+
+	useEffect(() => {
+		function handleClickOutside(event: MouseEvent) {
+			if (!languageMenuRef.current) {
+				return;
+			}
+
+			if (event.target instanceof Node && !languageMenuRef.current.contains(event.target)) {
+				setShowLanguageMenu(false);
+			}
+		}
+
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
 	}, []);
 
 	async function fetchAdminData(token: string) {
@@ -1340,6 +1457,64 @@ function App() {
 		setAdminError("");
 	}
 
+	function openAccountTool(tool: AccountToolKey) {
+		setShowAdminDashboard(false);
+		setAccountView(true);
+		setActiveAccountTool(tool);
+		setAuthMode("login");
+	}
+
+	function handleBalanceShortcut() {
+		openAccountTool("deposit");
+		void refreshAccountWorkspace();
+		setAccountMessage("Top up your wallet from the Deposit section.");
+		setAccountError("");
+	}
+
+	function handleAccountToggle() {
+		setAccountView((previous) => {
+			const next = !previous;
+			if (next) {
+				setShowAdminDashboard(false);
+				setActiveAccountTool("deposit");
+				setAuthMode("login");
+			}
+			return next;
+		});
+	}
+
+	function handleLanguageSelect(language: LanguageCode) {
+		setSelectedLanguage(language);
+		setShowLanguageMenu(false);
+		setAuthMessage(language === "sw" ? "Lugha imebadilishwa kuwa Kiswahili." : "Language switched to English.");
+		setAuthError("");
+	}
+
+	function handleAccountDetailsChange(field: keyof AccountDetailsForm, value: string) {
+		setAccountDetailsForm((previous) => ({
+			...previous,
+			[field]: value
+		}));
+	}
+
+	function handleAccountDetailsSave(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		localStorage.setItem("sportpesa_account_details", JSON.stringify(accountDetailsForm));
+
+		if (currentUser) {
+			const nextUser: UserProfile = {
+				...currentUser,
+				email: accountDetailsForm.emailAddress || currentUser.email,
+				phoneNumber: accountDetailsForm.mobileNumber || currentUser.phoneNumber
+			};
+			setCurrentUser(nextUser);
+			localStorage.setItem("sportpesa_user", JSON.stringify(nextUser));
+		}
+
+		setAccountError("");
+		setAccountMessage("Account details saved successfully.");
+	}
+
 	function handleLogout() {
 		setAccessToken("");
 		setCurrentUser(null);
@@ -1366,25 +1541,73 @@ function App() {
 					<h1>SportPesa</h1>
 					<span>KENYA</span>
 				</div>
-				<div className="top-actions">
+				<div className={`top-actions ${isLoggedIn ? "logged-in" : "logged-out"}`}>
 					{isLoggedIn ? (
 						<>
-							<div className="session-pill">
-								<span>Signed in</span>
-								<strong>{currentUser?.fullName}</strong>
-							</div>
-							<button type="button" onClick={() => setAccountView((previous) => !previous)}>
-								{accountView ? "Hide Account" : "Account"}
-							</button>
-							{isAdminUser && (
-								<button
-									type="button"
-									onClick={() => setShowAdminDashboard((previous) => !previous)}
-								>
-									{showAdminDashboard ? "Hide Admin" : "Admin Dashboard"}
+							<div className="header-utility" aria-label="Header utilities">
+								<button type="button" className="header-balance-chip header-balance-btn" onClick={handleBalanceShortcut}>
+									KSH {currentUser?.balance.toFixed(2) ?? "0.00"}
 								</button>
-							)}
-							<button type="button" className="logout-btn" onClick={handleLogout}>Logout</button>
+								<div className="header-language-menu" ref={languageMenuRef}>
+									<button
+										type="button"
+										className="header-utility-btn"
+										aria-label="Language selection"
+										onClick={() => setShowLanguageMenu((previous) => !previous)}
+									>
+										Language
+									</button>
+									{showLanguageMenu && (
+										<div className="language-menu-dropdown" role="menu" aria-label="Select language">
+											<button
+												type="button"
+												className={`language-option ${selectedLanguage === "en" ? "active" : ""}`}
+												onClick={() => handleLanguageSelect("en")}
+											>
+												English
+											</button>
+											<button
+												type="button"
+												className={`language-option ${selectedLanguage === "sw" ? "active" : ""}`}
+												onClick={() => handleLanguageSelect("sw")}
+											>
+												Kiswahili
+											</button>
+										</div>
+									)}
+								</div>
+								<button type="button" className="header-utility-btn" onClick={handleAccountToggle}>
+									{accountView ? "Hide Account" : "Show Account"}
+								</button>
+								{isAdminUser && (
+									<button
+										type="button"
+										className="header-utility-btn"
+										onClick={() => setShowAdminDashboard((previous) => !previous)}
+									>
+										{showAdminDashboard ? "Hide Admin" : "Admin"}
+									</button>
+								)}
+								<button type="button" className="header-utility-btn" onClick={handleLogout}>Logout</button>
+							</div>
+							<div className="account-shortcuts" aria-label="Account shortcuts">
+								<button type="button" className="header-link-btn" onClick={() => openAccountTool("betHistory")}>
+									<span aria-hidden="true">◷</span>
+									Bet History
+								</button>
+								<button type="button" className="header-link-btn" onClick={() => openAccountTool("transactionHistory")}>
+									<span aria-hidden="true">⇅</span>
+									Transaction History
+								</button>
+								<button type="button" className="header-link-btn" onClick={() => openAccountTool("withdraw")}>
+									<span aria-hidden="true">⇪</span>
+									Withdraw
+								</button>
+								<button type="button" className="header-link-btn" onClick={() => openAccountTool("settings")}>
+									<span aria-hidden="true">⚙</span>
+									Settings
+								</button>
+							</div>
 						</>
 					) : (
 						<>
@@ -1799,13 +2022,113 @@ function App() {
 							)}
 
 							{activeAccountTool === "settings" && (
-								<div className="account-card">
-									<h4>Settings</h4>
-									<p>Name: {currentUser?.fullName}</p>
-									<p>Email: {currentUser?.email}</p>
-									<p>Phone: {currentUser?.phoneNumber || "-"}</p>
-									<button type="button" onClick={refreshAccountWorkspace} disabled={accountLoading}>Refresh Profile</button>
-								</div>
+								<section className="account-details-shell">
+									<header className="account-details-header">Account Details</header>
+									<form className="account-details-form" onSubmit={handleAccountDetailsSave}>
+										<div className="account-details-block">
+											<h4>Login Details</h4>
+											<label htmlFor="settings-mobile-number">Mobile number</label>
+											<div className="settings-login-row">
+												<input
+													id="settings-mobile-number"
+													type="tel"
+													value={accountDetailsForm.mobileNumber}
+													onChange={(event) => handleAccountDetailsChange("mobileNumber", event.target.value)}
+													placeholder="Mobile number"
+												/>
+												<button type="button" className="settings-secondary-btn" onClick={() => setAccountMessage("Password change flow will be enabled on your next update.")}>
+													Change password
+												</button>
+											</div>
+										</div>
+
+										<div className="settings-divider" />
+
+										<div className="settings-columns">
+											<section className="account-details-block">
+												<h4>Personal details</h4>
+												<p className="settings-helper">Your personal details are important to keep your SportPesa account safe.</p>
+
+												<label htmlFor="settings-first-name">First name *</label>
+												<input id="settings-first-name" type="text" value={accountDetailsForm.firstName} onChange={(event) => handleAccountDetailsChange("firstName", event.target.value)} placeholder="First name" required />
+
+												<label htmlFor="settings-middle-name">Middle name</label>
+												<input id="settings-middle-name" type="text" value={accountDetailsForm.middleName} onChange={(event) => handleAccountDetailsChange("middleName", event.target.value)} placeholder="Middle name" />
+
+												<label htmlFor="settings-last-name">Last name *</label>
+												<input id="settings-last-name" type="text" value={accountDetailsForm.lastName} onChange={(event) => handleAccountDetailsChange("lastName", event.target.value)} placeholder="Last name" required />
+
+												<label htmlFor="settings-dob">Date of birth (dd/mm/YYYY) *</label>
+												<input id="settings-dob" type="text" value={accountDetailsForm.dateOfBirth} onChange={(event) => handleAccountDetailsChange("dateOfBirth", event.target.value)} placeholder="Date of birth" required />
+
+												<label htmlFor="settings-id-number">ID number *</label>
+												<input id="settings-id-number" type="text" value={accountDetailsForm.idNumber} onChange={(event) => handleAccountDetailsChange("idNumber", event.target.value)} placeholder="Kenyan ID or passport" required />
+
+												<label htmlFor="settings-occupation">Occupation *</label>
+												<input id="settings-occupation" type="text" value={accountDetailsForm.occupation} onChange={(event) => handleAccountDetailsChange("occupation", event.target.value)} placeholder="Occupation" required />
+											</section>
+
+											<section className="account-details-block">
+												<h4>Physical Address</h4>
+												<p className="settings-helper">Your physical address is important to keep your SportPesa account safe.</p>
+
+												<label htmlFor="settings-village">Village / Street *</label>
+												<input id="settings-village" type="text" value={accountDetailsForm.villageStreet} onChange={(event) => handleAccountDetailsChange("villageStreet", event.target.value)} placeholder="Village / Street" required />
+
+												<div className="settings-row-two">
+													<div>
+														<label htmlFor="settings-street-number">Street number</label>
+														<input id="settings-street-number" type="text" value={accountDetailsForm.streetNumber} onChange={(event) => handleAccountDetailsChange("streetNumber", event.target.value)} placeholder="Street number" />
+													</div>
+													<div>
+														<label htmlFor="settings-block">Block</label>
+														<input id="settings-block" type="text" value={accountDetailsForm.block} onChange={(event) => handleAccountDetailsChange("block", event.target.value)} placeholder="Block" />
+													</div>
+												</div>
+
+												<label htmlFor="settings-city">City *</label>
+												<input id="settings-city" type="text" value={accountDetailsForm.city} onChange={(event) => handleAccountDetailsChange("city", event.target.value)} placeholder="City" required />
+
+												<label htmlFor="settings-county">County *</label>
+												<input id="settings-county" type="text" value={accountDetailsForm.county} onChange={(event) => handleAccountDetailsChange("county", event.target.value)} placeholder="County" required />
+
+												<label htmlFor="settings-sub-county">Sub-county</label>
+												<input id="settings-sub-county" type="text" value={accountDetailsForm.subCounty} onChange={(event) => handleAccountDetailsChange("subCounty", event.target.value)} placeholder="Sub-county" />
+
+												<div className="settings-row-two">
+													<div>
+														<label htmlFor="settings-postal-address">Postal address *</label>
+														<input id="settings-postal-address" type="text" value={accountDetailsForm.postalAddress} onChange={(event) => handleAccountDetailsChange("postalAddress", event.target.value)} placeholder="Postal address" required />
+													</div>
+													<div>
+														<label htmlFor="settings-postal-code">Postal code *</label>
+														<input id="settings-postal-code" type="text" value={accountDetailsForm.postalCode} onChange={(event) => handleAccountDetailsChange("postalCode", event.target.value)} placeholder="Postal code" required />
+													</div>
+												</div>
+											</section>
+										</div>
+
+										<section className="account-details-block settings-contact-block">
+											<h4>Contact Information</h4>
+											<p className="settings-helper">Your contact information is important to keep your SportPesa account safe.</p>
+
+											<label htmlFor="settings-email">Email address</label>
+											<input id="settings-email" type="email" value={accountDetailsForm.emailAddress} onChange={(event) => handleAccountDetailsChange("emailAddress", event.target.value)} placeholder="Email address" />
+
+											<label htmlFor="settings-alt-mobile-1">Alternative mobile number 1</label>
+											<input id="settings-alt-mobile-1" type="tel" value={accountDetailsForm.altMobile1} onChange={(event) => handleAccountDetailsChange("altMobile1", event.target.value)} placeholder="Alternative mobile number" />
+
+											<label htmlFor="settings-alt-mobile-2">Alternative mobile number 2</label>
+											<input id="settings-alt-mobile-2" type="tel" value={accountDetailsForm.altMobile2} onChange={(event) => handleAccountDetailsChange("altMobile2", event.target.value)} placeholder="Alternative mobile number" />
+										</section>
+
+										<div className="settings-save-row">
+											<button type="submit" className="settings-save-btn" disabled={accountLoading}>
+												{accountLoading ? "Saving..." : "Save Changes"}
+											</button>
+										</div>
+									</form>
+								</section>
 							)}
 
 							{activeAccountTool === "selfExclusion" && (
