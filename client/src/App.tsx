@@ -19,15 +19,24 @@ type Match = {
 type ModuleKey =
 	| "highlights"
 	| "popular"
+	| "goalRush"
 	| "top5"
+	| "countries"
 	| "today"
 	| "upcoming"
 	| "otherSports"
+	| "efootball"
 	| "basketball"
 	| "tennis"
 	| "rugby"
+	| "iceHockey"
+	| "volleyball"
+	| "handball"
 	| "cricket"
-	| "mma";
+	| "baseball"
+	| "boxing"
+	| "mma"
+	| "americanFootball";
 
 type BetSelection = {
 	matchId: string;
@@ -53,18 +62,27 @@ const SOCKET_BASE = import.meta.env.VITE_SOCKET_BASE || "";
 const FOOTBALL_MODULES: Array<{ key: ModuleKey; label: string }> = [
 	{ key: "highlights", label: "Highlights" },
 	{ key: "popular", label: "Popular Games" },
+	{ key: "goalRush", label: "Goal Rush" },
 	{ key: "top5", label: "Top 5 Leagues" },
+	{ key: "countries", label: "Countries" },
 	{ key: "today", label: "Today Games" },
 	{ key: "upcoming", label: "Upcoming Games" }
 ];
 
 const OTHER_SPORT_MODULES: Array<{ key: ModuleKey; label: string }> = [
 	{ key: "otherSports", label: "Other Sports" },
+	{ key: "efootball", label: "eFootball" },
 	{ key: "basketball", label: "Basketball" },
 	{ key: "tennis", label: "Tennis" },
 	{ key: "rugby", label: "Rugby Union" },
+	{ key: "iceHockey", label: "Ice Hockey" },
+	{ key: "volleyball", label: "Volleyball" },
+	{ key: "handball", label: "Handball" },
 	{ key: "cricket", label: "Cricket" },
-	{ key: "mma", label: "MMA" }
+	{ key: "baseball", label: "Baseball" },
+	{ key: "boxing", label: "Boxing" },
+	{ key: "mma", label: "MMA" },
+	{ key: "americanFootball", label: "American Football" }
 ];
 
 const TOP_LEAGUES = new Set(["Premier League", "La Liga", "Serie A", "Bundesliga", "Ligue 1"]);
@@ -88,9 +106,9 @@ function createSportFixture(monthValue: string, sport: string, home: string, awa
 	const safeMonth = Number.isInteger(month) && month >= 1 && month <= 12 ? month : new Date().getMonth() + 1;
 	const startHour = slot === 0 ? 13 : slot === 1 ? 16 : 20;
 	const start = new Date(Date.UTC(safeYear, safeMonth - 1, day, startHour, 15, 0, 0));
-    const homeOdd = Number((1.65 + ((day + slot) % 6) * 0.24).toFixed(2));
-    const drawOdd = Number((2.95 + ((day + slot + 2) % 5) * 0.21).toFixed(2));
-    const awayOdd = Number((1.72 + ((day + slot + 4) % 6) * 0.27).toFixed(2));
+	const homeOdd = Number((1.65 + ((day + slot) % 6) * 0.24).toFixed(2));
+	const drawOdd = Number((2.95 + ((day + slot + 2) % 5) * 0.21).toFixed(2));
+	const awayOdd = Number((1.72 + ((day + slot + 4) % 6) * 0.27).toFixed(2));
 
 	return {
 		id: `${sport}-${safeYear}-${safeMonth}-${day}-${slot}-${home}-${away}`,
@@ -111,6 +129,9 @@ function createSportFixture(monthValue: string, sport: string, home: string, awa
 
 function buildOtherSportsMatches(monthValue: string): Match[] {
 	return [
+		createSportFixture(monthValue, "eFootball", "eArsenal", "eChelsea", 2, 0),
+		createSportFixture(monthValue, "eFootball", "eBarcelona", "eReal Madrid", 11, 1),
+		createSportFixture(monthValue, "eFootball", "eBayern", "ePSG", 23, 2),
 		createSportFixture(monthValue, "Basketball", "Lakers", "Celtics", 3, 0),
 		createSportFixture(monthValue, "Basketball", "Bulls", "Warriors", 10, 1),
 		createSportFixture(monthValue, "Basketball", "Heat", "Nets", 18, 2),
@@ -120,12 +141,30 @@ function buildOtherSportsMatches(monthValue: string): Match[] {
 		createSportFixture(monthValue, "Rugby Union", "Leinster", "Saracens", 6, 1),
 		createSportFixture(monthValue, "Rugby Union", "Sharks", "Stormers", 14, 0),
 		createSportFixture(monthValue, "Rugby Union", "Toulouse", "Munster", 22, 2),
+		createSportFixture(monthValue, "Ice Hockey", "Bruins", "Maple Leafs", 8, 1),
+		createSportFixture(monthValue, "Ice Hockey", "Rangers", "Avalanche", 17, 2),
+		createSportFixture(monthValue, "Ice Hockey", "Panthers", "Stars", 25, 0),
+		createSportFixture(monthValue, "Volleyball", "Kenya Prisons", "KPA", 5, 0),
+		createSportFixture(monthValue, "Volleyball", "APR", "Police VC", 13, 1),
+		createSportFixture(monthValue, "Volleyball", "Al Ahly", "Zamalek", 21, 2),
+		createSportFixture(monthValue, "Handball", "Barca Handbol", "Veszprem", 9, 0),
+		createSportFixture(monthValue, "Handball", "PSG Handball", "Kiel", 15, 2),
+		createSportFixture(monthValue, "Handball", "Aalborg", "Magdeburg", 27, 1),
 		createSportFixture(monthValue, "Cricket", "India", "Australia", 7, 2),
 		createSportFixture(monthValue, "Cricket", "England", "South Africa", 16, 1),
 		createSportFixture(monthValue, "Cricket", "Pakistan", "New Zealand", 24, 0),
+		createSportFixture(monthValue, "Baseball", "Yankees", "Dodgers", 6, 2),
+		createSportFixture(monthValue, "Baseball", "Mets", "Red Sox", 14, 1),
+		createSportFixture(monthValue, "Baseball", "Cubs", "Giants", 28, 0),
+		createSportFixture(monthValue, "Boxing", "Tyson Fury", "Oleksandr Usyk", 12, 2),
+		createSportFixture(monthValue, "Boxing", "Canelo", "Benavidez", 20, 1),
+		createSportFixture(monthValue, "Boxing", "Joshua", "Wilder", 29, 0),
 		createSportFixture(monthValue, "MMA", "Adesanya", "Whittaker", 9, 2),
 		createSportFixture(monthValue, "MMA", "Edwards", "Covington", 19, 1),
-		createSportFixture(monthValue, "MMA", "Jones", "Aspinall", 26, 2)
+		createSportFixture(monthValue, "MMA", "Jones", "Aspinall", 26, 2),
+		createSportFixture(monthValue, "American Football", "Chiefs", "49ers", 4, 2),
+		createSportFixture(monthValue, "American Football", "Bills", "Cowboys", 18, 0),
+		createSportFixture(monthValue, "American Football", "Eagles", "Ravens", 30, 1)
 	];
 }
 
@@ -233,6 +272,7 @@ function App() {
 	const [liveStatus, setLiveStatus] = useState("Connecting...");
 	const [selectedMonth, setSelectedMonth] = useState(toMonthInputValue);
 	const [selectedDate, setSelectedDate] = useState("all");
+	const [selectedLeague, setSelectedLeague] = useState("all");
 	const [activeModule, setActiveModule] = useState<ModuleKey>("highlights");
 	const [authError, setAuthError] = useState("");
 	const [authMessage, setAuthMessage] = useState("");
@@ -470,7 +510,13 @@ function App() {
 	}, [apiOnline, selectedMonth]);
 
 	useEffect(() => {
-		setSelectedDate("all");
+		if (activeModule === "today") {
+			setSelectedDate(matchDateKey(new Date().toISOString()));
+		} else {
+			setSelectedDate("all");
+		}
+
+		setSelectedLeague("all");
 	}, [selectedMonth, activeModule]);
 
 	const moduleTitle = useMemo(() => {
@@ -481,48 +527,62 @@ function App() {
 		const merged = [...matches, ...otherSportsMatches];
 		const now = new Date();
 		const todayKey = matchDateKey(now.toISOString());
+		const sorted = (items: Match[]) =>
+			items.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
 		switch (activeModule) {
 			case "highlights":
-				return merged
-					.filter(
+				return sorted(
+					merged.filter(
 						(match) =>
 							match.sport === "Football" &&
 							(HIGHLIGHT_TEAMS.has(match.homeTeam) || HIGHLIGHT_TEAMS.has(match.awayTeam))
 					)
-					.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+				);
 			case "popular":
-				return merged
-					.filter((match) => match.sport === "Football")
-					.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+				return sorted(merged.filter((match) => match.sport === "Football"));
+			case "goalRush":
+				return sorted(
+					merged
+						.filter((match) => match.sport === "Football")
+						.filter((match) => match.odds.home + match.odds.draw + match.odds.away >= 8.7)
+				);
 			case "top5":
-				return merged
-					.filter((match) => match.sport === "Football" && TOP_LEAGUES.has(match.league))
-					.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+				return sorted(merged.filter((match) => match.sport === "Football" && TOP_LEAGUES.has(match.league)));
+			case "countries":
+				return sorted(merged.filter((match) => match.sport === "Football"));
 			case "today":
-				return merged
-					.filter((match) => matchDateKey(match.startTime) === todayKey)
-					.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+				return sorted(merged.filter((match) => matchDateKey(match.startTime) === todayKey));
 			case "upcoming":
-				return merged
-					.filter((match) => new Date(match.startTime).getTime() >= now.getTime())
-					.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+				return sorted(merged.filter((match) => new Date(match.startTime).getTime() >= now.getTime()));
 			case "otherSports":
-				return merged
-					.filter((match) => match.sport !== "Football")
-					.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+				return sorted(merged.filter((match) => match.sport !== "Football"));
+			case "efootball":
+				return sorted(merged.filter((match) => match.sport === "eFootball"));
 			case "basketball":
-				return merged.filter((match) => match.sport === "Basketball");
+				return sorted(merged.filter((match) => match.sport === "Basketball"));
 			case "tennis":
-				return merged.filter((match) => match.sport === "Tennis");
+				return sorted(merged.filter((match) => match.sport === "Tennis"));
 			case "rugby":
-				return merged.filter((match) => match.sport === "Rugby Union");
+				return sorted(merged.filter((match) => match.sport === "Rugby Union"));
+			case "iceHockey":
+				return sorted(merged.filter((match) => match.sport === "Ice Hockey"));
+			case "volleyball":
+				return sorted(merged.filter((match) => match.sport === "Volleyball"));
+			case "handball":
+				return sorted(merged.filter((match) => match.sport === "Handball"));
 			case "cricket":
-				return merged.filter((match) => match.sport === "Cricket");
+				return sorted(merged.filter((match) => match.sport === "Cricket"));
+			case "baseball":
+				return sorted(merged.filter((match) => match.sport === "Baseball"));
+			case "boxing":
+				return sorted(merged.filter((match) => match.sport === "Boxing"));
 			case "mma":
-				return merged.filter((match) => match.sport === "MMA");
+				return sorted(merged.filter((match) => match.sport === "MMA"));
+			case "americanFootball":
+				return sorted(merged.filter((match) => match.sport === "American Football"));
 			default:
-				return merged;
+				return sorted(merged);
 		}
 	}, [activeModule, matches, otherSportsMatches]);
 
@@ -538,13 +598,28 @@ function App() {
 		return Array.from(byDate).sort((a, b) => a.localeCompare(b));
 	}, [scopedMatches]);
 
+	const availableLeagues = useMemo(() => {
+		const leagues = new Set<string>();
+		for (const match of scopedMatches) {
+			if (match.league) {
+				leagues.add(match.league);
+			}
+		}
+		return Array.from(leagues).sort((a, b) => a.localeCompare(b));
+	}, [scopedMatches]);
+
 	const visibleMatches = useMemo(() => {
+		const withLeague =
+			selectedLeague === "all"
+				? scopedMatches
+				: scopedMatches.filter((match) => match.league === selectedLeague);
+
 		if (selectedDate === "all") {
-			return scopedMatches;
+			return withLeague;
 		}
 
-		return scopedMatches.filter((match) => matchDateKey(match.startTime) === selectedDate);
-	}, [scopedMatches, selectedDate]);
+		return withLeague.filter((match) => matchDateKey(match.startTime) === selectedDate);
+	}, [scopedMatches, selectedDate, selectedLeague]);
 
 	const betslip = useMemo(() => Object.values(activeSelection), [activeSelection]);
 
@@ -793,6 +868,24 @@ function App() {
 								</option>
 							))}
 						</select>
+
+						{activeModule === "countries" && (
+							<>
+								<label htmlFor="league-filter">Country/League</label>
+								<select
+									id="league-filter"
+									value={selectedLeague}
+									onChange={(event) => setSelectedLeague(event.target.value)}
+								>
+									<option value="all">All countries</option>
+									{availableLeagues.map((league) => (
+										<option value={league} key={league}>
+											{league}
+										</option>
+									))}
+								</select>
+							</>
+						)}
 					</div>
 
 					{error && <p className="error-text">{error}</p>}
