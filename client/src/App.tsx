@@ -561,6 +561,11 @@ function App() {
 	const [adminPayoutBetId, setAdminPayoutBetId] = useState("");
 	const [apiOnline, setApiOnline] = useState(true);
 	const [apiRetryTick, setApiRetryTick] = useState(0);
+	const [useCompactSportsModules, setUseCompactSportsModules] = useState(() =>
+		typeof window !== "undefined" ? window.innerWidth <= 1024 : false
+	);
+	const [showFootballModules, setShowFootballModules] = useState(true);
+	const [showOtherSportsModules, setShowOtherSportsModules] = useState(false);
 	const languageMenuRef = useRef<HTMLDivElement | null>(null);
 	const isLoggedIn = Boolean(accessToken && currentUser);
 	const isAdminUser = currentUser?.role === "admin";
@@ -666,6 +671,24 @@ function App() {
 		document.addEventListener("mousedown", handleClickOutside);
 		return () => document.removeEventListener("mousedown", handleClickOutside);
 	}, []);
+
+	useEffect(() => {
+		function handleResize() {
+			setUseCompactSportsModules(window.innerWidth <= 1024);
+		}
+
+		handleResize();
+		window.addEventListener("resize", handleResize);
+		return () => window.removeEventListener("resize", handleResize);
+	}, []);
+
+	useEffect(() => {
+		if (useCompactSportsModules) {
+			const isOtherSportsModule = OTHER_SPORT_MODULES.some((module) => module.key === activeModule);
+			setShowFootballModules(!isOtherSportsModule);
+			setShowOtherSportsModules(isOtherSportsModule);
+		}
+	}, [activeModule, useCompactSportsModules]);
 
 	async function fetchAdminData(token: string) {
 		const headers = {
@@ -1750,39 +1773,99 @@ function App() {
 					) : (
 						<>
 							<h3>Football</h3>
-							<ul>
-								{FOOTBALL_MODULES.map((module) => (
-									<li key={module.key}>
-										<button
-											type="button"
-											className={`module-btn ${activeModule === module.key ? "active" : ""}`}
-											onClick={() => {
-												setActiveTopNav("sports");
-												setActiveModule(module.key);
-											}}
-										>
-											{module.label}
-										</button>
-									</li>
-								))}
-							</ul>
-							<h4>Other Sports</h4>
-							<ul>
-								{OTHER_SPORT_MODULES.map((module) => (
-									<li key={module.key}>
-										<button
-											type="button"
-											className={`module-btn ${activeModule === module.key ? "active" : ""}`}
-											onClick={() => {
-												setActiveTopNav("sports");
-												setActiveModule(module.key);
-											}}
-										>
-											{module.label}
-										</button>
-									</li>
-								))}
-							</ul>
+							{useCompactSportsModules ? (
+								<div className="compact-sports-modules">
+									<button
+										type="button"
+										className={`compact-module-toggle ${showFootballModules ? "expanded" : ""}`}
+										onClick={() => setShowFootballModules((previous) => !previous)}
+									>
+										<span>Football Markets</span>
+										<span aria-hidden="true">{showFootballModules ? "−" : "+"}</span>
+									</button>
+									{showFootballModules && (
+										<ul>
+											{FOOTBALL_MODULES.map((module) => (
+												<li key={module.key}>
+													<button
+														type="button"
+														className={`module-btn ${activeModule === module.key ? "active" : ""}`}
+														onClick={() => {
+															setActiveTopNav("sports");
+															setActiveModule(module.key);
+														}}
+													>
+														{module.label}
+													</button>
+												</li>
+											))}
+										</ul>
+									)}
+
+									<button
+										type="button"
+										className={`compact-module-toggle ${showOtherSportsModules ? "expanded" : ""}`}
+										onClick={() => setShowOtherSportsModules((previous) => !previous)}
+									>
+										<span>Other Sports</span>
+										<span aria-hidden="true">{showOtherSportsModules ? "−" : "+"}</span>
+									</button>
+									{showOtherSportsModules && (
+										<ul>
+											{OTHER_SPORT_MODULES.map((module) => (
+												<li key={module.key}>
+													<button
+														type="button"
+														className={`module-btn ${activeModule === module.key ? "active" : ""}`}
+														onClick={() => {
+															setActiveTopNav("sports");
+															setActiveModule(module.key);
+														}}
+													>
+														{module.label}
+													</button>
+												</li>
+											))}
+										</ul>
+									)}
+								</div>
+							) : (
+								<>
+									<ul>
+										{FOOTBALL_MODULES.map((module) => (
+											<li key={module.key}>
+												<button
+													type="button"
+													className={`module-btn ${activeModule === module.key ? "active" : ""}`}
+													onClick={() => {
+														setActiveTopNav("sports");
+														setActiveModule(module.key);
+													}}
+												>
+													{module.label}
+												</button>
+											</li>
+										))}
+									</ul>
+									<h4>Other Sports</h4>
+									<ul>
+										{OTHER_SPORT_MODULES.map((module) => (
+											<li key={module.key}>
+												<button
+													type="button"
+													className={`module-btn ${activeModule === module.key ? "active" : ""}`}
+													onClick={() => {
+														setActiveTopNav("sports");
+														setActiveModule(module.key);
+													}}
+												>
+													{module.label}
+												</button>
+											</li>
+										))}
+									</ul>
+								</>
+							)}
 						</>
 					)}
 				</aside>
