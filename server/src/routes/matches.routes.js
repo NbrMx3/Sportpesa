@@ -3,6 +3,7 @@ import { requireAdmin, requireAuth } from "../middleware/auth.js";
 import { mapMatch, query } from "../data/db.js";
 import { roundTo2 } from "../utils/betting.js";
 import { fetchFootballMatchesAndOdds } from "../utils/footballApi.js";
+import { buildLocalFallbackMatches } from "../utils/localFallbackMatches.js";
 
 const router = express.Router();
 
@@ -55,6 +56,11 @@ async function fetchInternalMatches() {
   return result.rows.map(mapMatch);
 }
 
+function getLocalFallbackMatches(req) {
+  const queryWindow = getFootballQueryWindow(req);
+  return buildLocalFallbackMatches(queryWindow);
+}
+
 router.get("/football/matches", async (req, res) => {
   try {
     const payload = await fetchFootballMatchesAndOdds(getFootballQueryWindow(req));
@@ -67,16 +73,27 @@ router.get("/football/matches", async (req, res) => {
       });
     }
 
-    const fallbackMatches = await fetchInternalMatches();
+    let fallbackMatches = [];
+    try {
+      fallbackMatches = await fetchInternalMatches();
+    } catch {
+      fallbackMatches = getLocalFallbackMatches(req);
+    }
 
     return res.json({
-      source: "internal-fallback",
+      source: fallbackMatches.length ? "internal-fallback" : "local-fallback",
       sport: "football",
       matches: fallbackMatches,
       providerErrors: payload.errors || []
     });
   } catch {
-    return res.status(500).json({ error: "Failed to fetch football matches" });
+    const fallbackMatches = getLocalFallbackMatches(req);
+    return res.json({
+      source: "local-fallback",
+      sport: "football",
+      matches: fallbackMatches,
+      providerErrors: ["External providers and database unavailable"]
+    });
   }
 });
 
@@ -100,7 +117,13 @@ router.get("/football/odds", async (req, res) => {
       });
     }
 
-    const fallbackMatches = await fetchInternalMatches();
+    let fallbackMatches = [];
+    try {
+      fallbackMatches = await fetchInternalMatches();
+    } catch {
+      fallbackMatches = getLocalFallbackMatches(req);
+    }
+
     const fallbackOdds = fallbackMatches.map((match) => ({
       matchId: match.id,
       homeTeam: match.homeTeam,
@@ -110,13 +133,27 @@ router.get("/football/odds", async (req, res) => {
     }));
 
     return res.json({
-      source: "internal-fallback",
+      source: fallbackMatches.length ? "internal-fallback" : "local-fallback",
       sport: "football",
       odds: fallbackOdds,
       providerErrors: payload.errors || []
     });
   } catch {
-    return res.status(500).json({ error: "Failed to fetch football odds" });
+    const fallbackMatches = getLocalFallbackMatches(req);
+    const fallbackOdds = fallbackMatches.map((match) => ({
+      matchId: match.id,
+      homeTeam: match.homeTeam,
+      awayTeam: match.awayTeam,
+      odds: match.odds,
+      updatedAt: new Date().toISOString()
+    }));
+
+    return res.json({
+      source: "local-fallback",
+      sport: "football",
+      odds: fallbackOdds,
+      providerErrors: ["External providers and database unavailable"]
+    });
   }
 });
 
@@ -129,7 +166,7 @@ router.get("/matches", async (req, res) => {
     );
     return res.json({ matches: result.rows.map(mapMatch) });
   } catch {
-    return res.status(500).json({ error: "Failed to fetch matches" });
+    return res.json({ matches: getLocalFallbackMatches(req), source: "local-fallback" });
   }
 });
 
@@ -153,7 +190,15 @@ router.get("/odds", async (req, res) => {
 
     return res.json({ odds });
   } catch {
-    return res.status(500).json({ error: "Failed to fetch odds" });
+    const localOdds = getLocalFallbackMatches(req).map((match) => ({
+      matchId: match.id,
+      homeTeam: match.homeTeam,
+      awayTeam: match.awayTeam,
+      odds: match.odds,
+      updatedAt: new Date().toISOString()
+    }));
+
+    return res.json({ odds: localOdds, source: "local-fallback" });
   }
 });
 

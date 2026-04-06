@@ -7,12 +7,17 @@ import { startLiveOdds } from "./socket/liveOdds.js";
 
 async function startServer() {
   if (!config.databaseUrl) {
-    throw new Error(
-      `Database URL missing. Set one of: ${config.databaseEnvCandidates.join(", ")}`
+    console.warn(
+      `Database URL missing. Running in fallback mode. Set one of: ${config.databaseEnvCandidates.join(", ")}`
     );
   }
 
-  await initDatabase();
+  try {
+    await initDatabase();
+    console.log("Database connected and initialized");
+  } catch (error) {
+    console.warn("Database unavailable at startup. Continuing with fallback mode.", error?.message || error);
+  }
 
   const server = http.createServer(app);
 
