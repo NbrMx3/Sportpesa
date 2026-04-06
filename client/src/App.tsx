@@ -38,6 +38,8 @@ type ModuleKey =
 	| "mma"
 	| "americanFootball";
 
+type TopNavKey = "sports" | "liveGames" | "aviator" | "casino" | "jackpots" | "more";
+
 type BetSelection = {
 	matchId: string;
 	outcome: Outcome;
@@ -84,6 +86,48 @@ const OTHER_SPORT_MODULES: Array<{ key: ModuleKey; label: string }> = [
 	{ key: "mma", label: "MMA" },
 	{ key: "americanFootball", label: "American Football" }
 ];
+
+const TOP_NAV_ITEMS: Array<{ key: TopNavKey; label: string; badge?: string; count?: number }> = [
+	{ key: "sports", label: "Sports" },
+	{ key: "liveGames", label: "Live Games" },
+	{ key: "aviator", label: "Aviator", badge: "NEW" },
+	{ key: "casino", label: "Casino", count: 1 },
+	{ key: "jackpots", label: "Jackpots", badge: "NEW" },
+	{ key: "more", label: "More" }
+];
+
+const TOP_NAV_CONTENT: Record<TopNavKey, { heading: string; subtitle: string; cards: string[] }> = {
+	sports: {
+		heading: "Sportsbook",
+		subtitle: "Pre-match and in-play football odds",
+		cards: []
+	},
+	liveGames: {
+		heading: "Live Games",
+		subtitle: "Live fixtures and fast-moving in-play odds",
+		cards: []
+	},
+	aviator: {
+		heading: "Aviator",
+		subtitle: "Cash out before the flight flies away",
+		cards: ["Round starts every few seconds", "Auto-cashout settings", "Simple risk controls"]
+	},
+	casino: {
+		heading: "Casino",
+		subtitle: "Table games and slots in one place",
+		cards: ["Blackjack and Roulette", "Instant spins", "Daily bonus drops"]
+	},
+	jackpots: {
+		heading: "Jackpots",
+		subtitle: "Multi-level jackpots and pooled prizes",
+		cards: ["Mega weekly draws", "Pick-8 style entries", "Low stake, high ceiling"]
+	},
+	more: {
+		heading: "More",
+		subtitle: "Extra products and promos",
+		cards: ["Lucky Numbers", "Virtuals", "Campaign hub"]
+	}
+};
 
 const TOP_LEAGUES = new Set(["Premier League", "La Liga", "Serie A", "Bundesliga", "Ligue 1"]);
 const HIGHLIGHT_TEAMS = new Set([
@@ -299,6 +343,7 @@ function App() {
 	const [selectedDate, setSelectedDate] = useState("all");
 	const [selectedLeague, setSelectedLeague] = useState("all");
 	const [activeModule, setActiveModule] = useState<ModuleKey>("highlights");
+	const [activeTopNav, setActiveTopNav] = useState<TopNavKey>("sports");
 	const [authError, setAuthError] = useState("");
 	const [authMessage, setAuthMessage] = useState("");
 	const [authMode, setAuthMode] = useState<"login" | "register">("login");
@@ -314,6 +359,7 @@ function App() {
 	const monthOptions = useMemo(() => buildMonthOptions(), []);
 	const otherSportsMatches = useMemo(() => buildOtherSportsMatches(selectedMonth), [selectedMonth]);
 	const localFootballMatches = useMemo(() => buildLocalFootballMatches(selectedMonth), [selectedMonth]);
+	const sportsbookView = activeTopNav === "sports" || activeTopNav === "liveGames";
 
 	useEffect(() => {
 		const savedToken = localStorage.getItem("sportpesa_access_token") || "";
@@ -538,6 +584,13 @@ function App() {
 	}, [apiOnline, selectedMonth]);
 
 	useEffect(() => {
+		if (activeTopNav === "liveGames") {
+			setActiveModule("today");
+			setSelectedDate(matchDateKey(new Date().toISOString()));
+		}
+	}, [activeTopNav]);
+
+	useEffect(() => {
 		if (activeModule === "today") {
 			setSelectedDate(matchDateKey(new Date().toISOString()));
 		} else {
@@ -548,8 +601,14 @@ function App() {
 	}, [selectedMonth, activeModule]);
 
 	const moduleTitle = useMemo(() => {
+		if (!sportsbookView) {
+			return TOP_NAV_CONTENT[activeTopNav].heading;
+		}
+
 		return [...FOOTBALL_MODULES, ...OTHER_SPORT_MODULES].find((module) => module.key === activeModule)?.label || "Matches";
-	}, [activeModule]);
+	}, [activeModule, activeTopNav, sportsbookView]);
+
+	const topNavContent = TOP_NAV_CONTENT[activeTopNav];
 
 	const scopedMatches = useMemo(() => {
 		const merged = [...matches, ...otherSportsMatches];
@@ -815,12 +874,18 @@ function App() {
 			</header>
 
 			<nav className="main-nav">
-				<a href="#">Sports</a>
-				<a href="#">Live Games</a>
-				<a href="#">Aviator</a>
-				<a href="#">Casino</a>
-				<a href="#">Jackpots</a>
-				<a href="#">More</a>
+				{TOP_NAV_ITEMS.map((item) => (
+					<button
+						type="button"
+						key={item.key}
+						className={`top-nav-btn ${activeTopNav === item.key ? "active" : ""}`}
+						onClick={() => setActiveTopNav(item.key)}
+					>
+						<span>{item.label}</span>
+						{item.badge && <em className="top-nav-badge">{item.badge}</em>}
+						{typeof item.count === "number" && <em className="top-nav-count">{item.count}</em>}
+					</button>
+				))}
 			</nav>
 
 			<main className="content-grid">
@@ -832,7 +897,10 @@ function App() {
 								<button
 									type="button"
 									className={`module-btn ${activeModule === module.key ? "active" : ""}`}
-									onClick={() => setActiveModule(module.key)}
+									onClick={() => {
+										setActiveTopNav("sports");
+										setActiveModule(module.key);
+									}}
 								>
 									{module.label}
 								</button>
@@ -846,7 +914,10 @@ function App() {
 								<button
 									type="button"
 									className={`module-btn ${activeModule === module.key ? "active" : ""}`}
-									onClick={() => setActiveModule(module.key)}
+									onClick={() => {
+										setActiveTopNav("sports");
+										setActiveModule(module.key);
+									}}
 								>
 									{module.label}
 								</button>
@@ -860,9 +931,27 @@ function App() {
 						<img src="/sport.svg" alt="SportPesa" />
 						<div>
 							<p>{moduleTitle}</p>
-							<strong>{liveStatus}</strong>
+							<strong>{sportsbookView ? liveStatus : topNavContent.subtitle}</strong>
 						</div>
 					</div>
+
+					{!sportsbookView && (
+						<section className="product-panel">
+							<h3>{topNavContent.heading}</h3>
+							<p>{topNavContent.subtitle}</p>
+							<div className="product-grid">
+								{topNavContent.cards.map((card) => (
+									<article key={card}>
+										<strong>{card}</strong>
+										<span>Ready to play</span>
+									</article>
+								))}
+							</div>
+						</section>
+					)}
+
+					{sportsbookView && (
+						<>
 
 					<div className="filter-bar">
 						<label htmlFor="month-filter">Month</label>
@@ -954,6 +1043,8 @@ function App() {
 							</div>
 						))}
 					</div>
+						</>
+					)}
 				</section>
 
 				<aside className="right-panel">
