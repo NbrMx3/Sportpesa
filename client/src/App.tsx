@@ -47,8 +47,7 @@ type TopNavKey =
 	| "jackpots"
 	| "luckyNumbers"
 	| "more"
-	| "apps"
-	| "admin";
+	| "apps";
 
 type HeroSlide = {
 	id: string;
@@ -147,8 +146,7 @@ const TOP_NAV_ITEMS: Array<{ key: TopNavKey; label: string; badge?: string; coun
 	{ key: "jackpots", label: "Jackpots", badge: "NEW" },
 	{ key: "luckyNumbers", label: "Lucky Numbers", count: 7 },
 	{ key: "more", label: "More", hasCaret: true },
-	{ key: "apps", label: "Apps", hasCaret: true },
-	{ key: "admin", label: "Admin" }
+	{ key: "apps", label: "Apps", hasCaret: true }
 ];
 
 const TOP_NAV_CONTENT: Record<TopNavKey, { heading: string; subtitle: string; cards: string[] }> = {
@@ -196,11 +194,6 @@ const TOP_NAV_CONTENT: Record<TopNavKey, { heading: string; subtitle: string; ca
 		heading: "Apps",
 		subtitle: "Install and play on mobile quickly",
 		cards: ["Android app", "Lite web app", "Install guide"]
-	},
-	admin: {
-		heading: "Admin Dashboard",
-		subtitle: "System control center with secured access",
-		cards: []
 	}
 };
 
@@ -443,11 +436,7 @@ function App() {
 	const [phoneNumber, setPhoneNumber] = useState("");
 	const [accessToken, setAccessToken] = useState("");
 	const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
-	const [adminToken, setAdminToken] = useState("");
-	const [adminUser, setAdminUser] = useState<UserProfile | null>(null);
-	const [adminIdentifier, setAdminIdentifier] = useState("admin@sportpesa.local");
-	const [adminPassword, setAdminPassword] = useState("Admin123!");
-	const [googleIdToken, setGoogleIdToken] = useState("");
+	const [showAdminDashboard, setShowAdminDashboard] = useState(false);
 	const [adminLoading, setAdminLoading] = useState(false);
 	const [adminError, setAdminError] = useState("");
 	const [adminMessage, setAdminMessage] = useState("");
@@ -461,17 +450,16 @@ function App() {
 	const [adminPayoutBetId, setAdminPayoutBetId] = useState("");
 	const [apiOnline, setApiOnline] = useState(true);
 	const isLoggedIn = Boolean(accessToken && currentUser);
+	const isAdminUser = currentUser?.role === "admin";
 	const monthOptions = useMemo(() => buildMonthOptions(), []);
 	const otherSportsMatches = useMemo(() => buildOtherSportsMatches(selectedMonth), [selectedMonth]);
 	const localFootballMatches = useMemo(() => buildLocalFootballMatches(selectedMonth), [selectedMonth]);
 	const sportsbookView = activeTopNav === "sports" || activeTopNav === "liveGames";
-	const adminView = activeTopNav === "admin";
+	const adminView = Boolean(showAdminDashboard && isAdminUser);
 
 	useEffect(() => {
 		const savedToken = localStorage.getItem("sportpesa_access_token") || "";
 		const savedUser = localStorage.getItem("sportpesa_user");
-		const savedAdminToken = localStorage.getItem("sportpesa_admin_token") || "";
-		const savedAdminUser = localStorage.getItem("sportpesa_admin_user");
 
 		if (savedToken) {
 			setAccessToken(savedToken);
@@ -479,21 +467,13 @@ function App() {
 
 		if (savedUser) {
 			try {
-				setCurrentUser(JSON.parse(savedUser));
+				const parsedUser = JSON.parse(savedUser) as UserProfile;
+				setCurrentUser(parsedUser);
+				if (parsedUser.role === "admin") {
+					setShowAdminDashboard(true);
+				}
 			} catch {
 				localStorage.removeItem("sportpesa_user");
-			}
-		}
-
-		if (savedAdminToken) {
-			setAdminToken(savedAdminToken);
-		}
-
-		if (savedAdminUser) {
-			try {
-				setAdminUser(JSON.parse(savedAdminUser));
-			} catch {
-				localStorage.removeItem("sportpesa_admin_user");
 			}
 		}
 	}, []);
@@ -748,13 +728,13 @@ function App() {
 	}, [activeTopNav]);
 
 	useEffect(() => {
-		if (!adminView || !adminToken) {
+		if (!adminView || !accessToken || !isAdminUser) {
 			return;
 		}
 
 		setAdminLoading(true);
 		setAdminError("");
-		fetchAdminData(adminToken)
+		fetchAdminData(accessToken)
 			.then(() => {
 				setAdminMessage((previous) => previous || "Admin dashboard ready.");
 			})
@@ -764,7 +744,7 @@ function App() {
 			.finally(() => {
 				setAdminLoading(false);
 			});
-	}, [adminToken, adminView]);
+	}, [accessToken, adminView, isAdminUser]);
 
 	useEffect(() => {
 		const timer = window.setInterval(() => {
@@ -795,12 +775,16 @@ function App() {
 	}, [selectedMonth, activeModule]);
 
 	const moduleTitle = useMemo(() => {
+		if (adminView) {
+			return "Admin Dashboard";
+		}
+
 		if (!sportsbookView) {
 			return TOP_NAV_CONTENT[activeTopNav].heading;
 		}
 
 		return [...FOOTBALL_MODULES, ...OTHER_SPORT_MODULES].find((module) => module.key === activeModule)?.label || "Matches";
-	}, [activeModule, activeTopNav, sportsbookView]);
+	}, [activeModule, activeTopNav, adminView, sportsbookView]);
 
 	const topNavContent = TOP_NAV_CONTENT[activeTopNav];
 
@@ -1022,6 +1006,13 @@ function App() {
 			if (isUserProfile(userPayload)) {
 				setCurrentUser(userPayload);
 				localStorage.setItem("sportpesa_user", JSON.stringify(userPayload));
+				if (userPayload.role === "admin") {
+					setShowAdminDashboard(true);
+					setAdminMessage("Admin session active.");
+					setAdminError("");
+				} else {
+					setShowAdminDashboard(false);
+				}
 			}
 
 			setAuthMessage("Login successful.");
@@ -1033,109 +1024,16 @@ function App() {
 		}
 	}
 
-	async function handleAdminLogin(event: FormEvent<HTMLFormElement>) {
-		event.preventDefault();
-		setAdminLoading(true);
-		setAdminError("");
-		setAdminMessage("");
-
-		try {
-			const response = await fetch(`${API_BASE}/auth/admin/login`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json"
-				},
-				body: JSON.stringify({
-					identifier: adminIdentifier,
-					password: adminPassword
-				})
-			});
-
-			const data = await parseJsonSafely(response);
-
-			if (!response.ok) {
-				throw new Error(getPayloadString(data, "error") || `Admin login failed (${response.status})`);
-			}
-
-			const token = getPayloadString(data, "accessToken") || getPayloadString(data, "token");
-			if (!token) {
-				throw new Error("Admin token not returned");
-			}
-
-			setAdminToken(token);
-			localStorage.setItem("sportpesa_admin_token", token);
-
-			const userPayload = data?.user;
-			if (isUserProfile(userPayload)) {
-				setAdminUser(userPayload);
-				localStorage.setItem("sportpesa_admin_user", JSON.stringify(userPayload));
-			}
-
-			await fetchAdminData(token);
-			setAdminMessage("Admin login successful.");
-		} catch (adminLoginError) {
-			setAdminError(adminLoginError instanceof Error ? adminLoginError.message : "Admin login failed");
-		} finally {
-			setAdminLoading(false);
-		}
-	}
-
-	async function handleAdminGoogleLogin(event: FormEvent<HTMLFormElement>) {
-		event.preventDefault();
-		setAdminLoading(true);
-		setAdminError("");
-		setAdminMessage("");
-
-		try {
-			const response = await fetch(`${API_BASE}/auth/admin/google`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json"
-				},
-				body: JSON.stringify({
-					idToken: googleIdToken
-				})
-			});
-
-			const data = await parseJsonSafely(response);
-
-			if (!response.ok) {
-				throw new Error(getPayloadString(data, "error") || `Google admin login failed (${response.status})`);
-			}
-
-			const token = getPayloadString(data, "accessToken") || getPayloadString(data, "token");
-			if (!token) {
-				throw new Error("Admin token not returned");
-			}
-
-			setAdminToken(token);
-			localStorage.setItem("sportpesa_admin_token", token);
-
-			const userPayload = data?.user;
-			if (isUserProfile(userPayload)) {
-				setAdminUser(userPayload);
-				localStorage.setItem("sportpesa_admin_user", JSON.stringify(userPayload));
-			}
-
-			await fetchAdminData(token);
-			setAdminMessage("Admin Google login successful.");
-		} catch (googleAdminError) {
-			setAdminError(googleAdminError instanceof Error ? googleAdminError.message : "Google admin login failed");
-		} finally {
-			setAdminLoading(false);
-		}
-	}
-
 	async function refreshAdminDashboard() {
-		if (!adminToken) {
-			setAdminError("Admin token missing. Login again.");
+		if (!accessToken || !isAdminUser) {
+			setAdminError("Admin session missing. Login with an admin account.");
 			return;
 		}
 
 		setAdminLoading(true);
 		setAdminError("");
 		try {
-			await fetchAdminData(adminToken);
+			await fetchAdminData(accessToken);
 			setAdminMessage("Dashboard refreshed.");
 		} catch (refreshError) {
 			setAdminError(refreshError instanceof Error ? refreshError.message : "Failed to refresh admin dashboard");
@@ -1146,8 +1044,8 @@ function App() {
 
 	async function handleAdminResultSubmit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
-		if (!adminToken) {
-			setAdminError("Admin token missing. Login again.");
+		if (!accessToken || !isAdminUser) {
+			setAdminError("Admin session missing. Login with an admin account.");
 			return;
 		}
 
@@ -1158,7 +1056,7 @@ function App() {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${adminToken}`
+					Authorization: `Bearer ${accessToken}`
 				},
 				body: JSON.stringify({
 					matchId: adminMatchId,
@@ -1172,7 +1070,7 @@ function App() {
 			}
 
 			setAdminMessage("Match result processed.");
-			await fetchAdminData(adminToken);
+			await fetchAdminData(accessToken);
 		} catch (submitError) {
 			setAdminError(submitError instanceof Error ? submitError.message : "Failed to process result");
 		} finally {
@@ -1182,8 +1080,8 @@ function App() {
 
 	async function handleAdminPayout(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
-		if (!adminToken) {
-			setAdminError("Admin token missing. Login again.");
+		if (!accessToken || !isAdminUser) {
+			setAdminError("Admin session missing. Login with an admin account.");
 			return;
 		}
 
@@ -1193,7 +1091,7 @@ function App() {
 			const response = await fetch(`${API_BASE}/admin/payouts/${adminPayoutBetId}`, {
 				method: "POST",
 				headers: {
-					Authorization: `Bearer ${adminToken}`
+					Authorization: `Bearer ${accessToken}`
 				}
 			});
 
@@ -1203,7 +1101,7 @@ function App() {
 			}
 
 			setAdminMessage("Admin payout processed.");
-			await fetchAdminData(adminToken);
+			await fetchAdminData(accessToken);
 		} catch (payoutError) {
 			setAdminError(payoutError instanceof Error ? payoutError.message : "Failed to process admin payout");
 		} finally {
@@ -1211,23 +1109,26 @@ function App() {
 		}
 	}
 
-	function handleAdminLogout() {
-		setAdminToken("");
-		setAdminUser(null);
+	function handleAdminPanelClose() {
+		setShowAdminDashboard(false);
 		setAdminOverview(null);
 		setAdminUsers([]);
 		setAdminBets([]);
 		setAdminSignals([]);
 		setAdminTransactions([]);
-		setAdminMessage("Admin logged out.");
+		setAdminMessage("Admin dashboard hidden.");
 		setAdminError("");
-		localStorage.removeItem("sportpesa_admin_token");
-		localStorage.removeItem("sportpesa_admin_user");
 	}
 
 	function handleLogout() {
 		setAccessToken("");
 		setCurrentUser(null);
+		setShowAdminDashboard(false);
+		setAdminOverview(null);
+		setAdminUsers([]);
+		setAdminBets([]);
+		setAdminSignals([]);
+		setAdminTransactions([]);
 		setAuthMessage("Logged out successfully.");
 		setAuthError("");
 		localStorage.removeItem("sportpesa_access_token");
@@ -1248,6 +1149,14 @@ function App() {
 								<span>Signed in</span>
 								<strong>{currentUser?.fullName}</strong>
 							</div>
+							{isAdminUser && (
+								<button
+									type="button"
+									onClick={() => setShowAdminDashboard((previous) => !previous)}
+								>
+									{showAdminDashboard ? "Hide Admin" : "Admin Dashboard"}
+								</button>
+							)}
 							<button type="button" className="logout-btn" onClick={handleLogout}>Logout</button>
 						</>
 					) : (
@@ -1370,52 +1279,19 @@ function App() {
 					{adminView && (
 						<section className="admin-dashboard">
 							<h3>Admin Dashboard</h3>
-							<p>Secure control center for platform operations.</p>
-
-							<div className="admin-auth-grid">
-								<form className="admin-card" onSubmit={handleAdminLogin}>
-									<h4>Admin Login (JWT)</h4>
-									<input
-										type="text"
-										placeholder="Admin email or phone"
-										value={adminIdentifier}
-										onChange={(event) => setAdminIdentifier(event.target.value)}
-										required
-									/>
-									<input
-										type="password"
-										placeholder="Admin password"
-										value={adminPassword}
-										onChange={(event) => setAdminPassword(event.target.value)}
-										required
-									/>
-									<button type="submit" disabled={adminLoading}>{adminLoading ? "Signing in..." : "Sign In"}</button>
-								</form>
-
-								<form className="admin-card" onSubmit={handleAdminGoogleLogin}>
-									<h4>Google Admin Login</h4>
-									<input
-										type="text"
-										placeholder="Google ID token"
-										value={googleIdToken}
-										onChange={(event) => setGoogleIdToken(event.target.value)}
-										required
-									/>
-									<button type="submit" disabled={adminLoading}>{adminLoading ? "Verifying..." : "Login with Google"}</button>
-								</form>
-							</div>
+							<p>Secure control center for platform operations. Access is granted from normal login when account role is admin.</p>
 
 							{adminError && <p className="error-text">{adminError}</p>}
 							{adminMessage && <p className="status-text">{adminMessage}</p>}
 
-							{adminToken && (
+							{isAdminUser && (
 								<>
 									<div className="admin-panel-grid">
 										<div className="admin-card">
 											<h4>Session</h4>
-											<p>{adminUser ? `Admin: ${adminUser.fullName}` : "Authenticated"}</p>
+											<p>{currentUser ? `Admin: ${currentUser.fullName}` : "Authenticated"}</p>
 											<button type="button" onClick={refreshAdminDashboard} disabled={adminLoading}>Refresh Data</button>
-											<button type="button" onClick={handleAdminLogout}>Admin Logout</button>
+											<button type="button" onClick={handleAdminPanelClose}>Hide Dashboard</button>
 										</div>
 
 										<div className="admin-card">
