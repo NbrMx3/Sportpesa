@@ -129,8 +129,8 @@ Both football feed endpoints also accept optional query params:
 
 Root `vercel.json` includes rewrites that proxy:
 
-- `/api/*` -> `https://sportpesa-api.onrender.com/api/*`
-- `/socket.io/*` -> `https://sportpesa-api.onrender.com/socket.io/*`
+- `/api/*` -> `https://sportpesa.onrender.com/api/*`
+- `/socket.io/*` -> `https://sportpesa.onrender.com/socket.io/*`
 
 If your Render API URL is different, update `vercel.json` accordingly.
 
