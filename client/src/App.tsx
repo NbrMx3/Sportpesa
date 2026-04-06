@@ -49,6 +49,12 @@ type TopNavKey =
 	| "more"
 	| "apps";
 
+type HeroSlide = {
+	id: string;
+	image: string;
+	alt: string;
+};
+
 type BetSelection = {
 	matchId: string;
 	outcome: Outcome;
@@ -155,6 +161,19 @@ const TOP_NAV_CONTENT: Record<TopNavKey, { heading: string; subtitle: string; ca
 		cards: ["Android app", "Lite web app", "Install guide"]
 	}
 };
+
+const HERO_SLIDES: HeroSlide[] = [
+	{
+		id: "hero-1",
+		image: "/hero-slide-1.svg",
+		alt: "SportPesa promo banner with football campaign"
+	},
+	{
+		id: "hero-2",
+		image: "/hero-slide-2.svg",
+		alt: "SportPesa register by SMS campaign banner"
+	}
+];
 
 const TOP_LEAGUES = new Set(["Premier League", "La Liga", "Serie A", "Bundesliga", "Ligue 1"]);
 const HIGHLIGHT_TEAMS = new Set([
@@ -371,6 +390,7 @@ function App() {
 	const [selectedLeague, setSelectedLeague] = useState("all");
 	const [activeModule, setActiveModule] = useState<ModuleKey>("highlights");
 	const [activeTopNav, setActiveTopNav] = useState<TopNavKey>("sports");
+	const [activeHeroSlide, setActiveHeroSlide] = useState(0);
 	const [authError, setAuthError] = useState("");
 	const [authMessage, setAuthMessage] = useState("");
 	const [authMode, setAuthMode] = useState<"login" | "register">("login");
@@ -616,6 +636,24 @@ function App() {
 			setSelectedDate(matchDateKey(new Date().toISOString()));
 		}
 	}, [activeTopNav]);
+
+	useEffect(() => {
+		const timer = window.setInterval(() => {
+			setActiveHeroSlide((previous) => (previous + 1) % HERO_SLIDES.length);
+		}, 6000);
+
+		return () => {
+			window.clearInterval(timer);
+		};
+	}, []);
+
+	function goToPrevSlide() {
+		setActiveHeroSlide((previous) => (previous - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
+	}
+
+	function goToNextSlide() {
+		setActiveHeroSlide((previous) => (previous + 1) % HERO_SLIDES.length);
+	}
 
 	useEffect(() => {
 		if (activeModule === "today") {
@@ -956,8 +994,36 @@ function App() {
 
 				<section className="center-panel">
 					<div className="hero-banner">
-						<img src="/sport.svg" alt="SportPesa" />
-						<div>
+						<div className="hero-carousel">
+							{HERO_SLIDES.map((slide, index) => (
+								<img
+									key={slide.id}
+									src={slide.image}
+									alt={slide.alt}
+									className={`hero-slide ${index === activeHeroSlide ? "active" : ""}`}
+								/>
+							))}
+
+							<button type="button" className="hero-arrow left" onClick={goToPrevSlide} aria-label="Previous slide">
+								&#8249;
+							</button>
+							<button type="button" className="hero-arrow right" onClick={goToNextSlide} aria-label="Next slide">
+								&#8250;
+							</button>
+
+							<div className="hero-dots" role="tablist" aria-label="Hero slides">
+								{HERO_SLIDES.map((slide, index) => (
+									<button
+										type="button"
+										key={slide.id}
+										className={`hero-dot ${index === activeHeroSlide ? "active" : ""}`}
+										onClick={() => setActiveHeroSlide(index)}
+										aria-label={`Go to slide ${index + 1}`}
+									/>
+								))}
+							</div>
+						</div>
+						<div className="hero-status">
 							<p>{moduleTitle}</p>
 							<strong>{sportsbookView ? liveStatus : topNavContent.subtitle}</strong>
 						</div>

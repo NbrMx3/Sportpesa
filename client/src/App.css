@@ -270,30 +270,104 @@ body {
 }
 
 .hero-banner {
-	display: flex;
-	align-items: center;
-	gap: 1rem;
-	background: linear-gradient(110deg, #193a53, #2c5c7a);
-	border: 1px solid #355a75;
-	border-radius: 7px;
-	padding: 0.65rem 0.9rem;
+	display: grid;
+	gap: 0.45rem;
 	margin-bottom: 0.58rem;
 }
 
-.hero-banner img {
-	width: 55px;
-	height: 55px;
+.hero-carousel {
+	position: relative;
+	height: 250px;
+	overflow: hidden;
+	border: 1px solid #355a75;
+	border-radius: 8px;
+	background: #0f2434;
 }
 
-.hero-banner p {
+.hero-slide {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	opacity: 0;
+	transition: opacity 320ms ease;
+}
+
+.hero-slide.active {
+	opacity: 1;
+}
+
+.hero-arrow {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 42px;
+	height: 42px;
+	border: 0;
+	border-radius: 999px;
+	background: rgba(12, 27, 40, 0.62);
+	color: #ffffff;
+	font-size: 2rem;
+	line-height: 1;
+	cursor: pointer;
+	z-index: 2;
+}
+
+.hero-arrow.left {
+	left: 0.8rem;
+}
+
+.hero-arrow.right {
+	right: 0.8rem;
+}
+
+.hero-arrow:hover {
+	background: rgba(20, 43, 62, 0.8);
+}
+
+.hero-dots {
+	position: absolute;
+	left: 50%;
+	bottom: 0.8rem;
+	transform: translateX(-50%);
+	display: flex;
+	gap: 0.45rem;
+	z-index: 2;
+}
+
+.hero-dot {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	border: 1px solid rgba(255, 255, 255, 0.72);
+	background: transparent;
+	cursor: pointer;
+}
+
+.hero-dot.active {
+	background: #ffffff;
+}
+
+.hero-status {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	background: #0a2233;
+	border: 1px solid #355a75;
+	padding: 0.52rem 0.72rem;
+}
+
+.hero-status p {
 	margin: 0;
-	font-size: 1.32rem;
+	font-size: 1.05rem;
 	font-weight: 800;
 	text-transform: uppercase;
 }
 
-.hero-banner strong {
+.hero-status strong {
 	color: #7ce2ff;
+	font-size: 0.9rem;
 }
 
 .filter-bar {
@@ -587,6 +661,16 @@ body {
 	.odds-head,
 	.odds-row {
 		grid-template-columns: minmax(150px, 1fr) 82px 82px 82px;
+	}
+
+	.hero-carousel {
+		height: 190px;
+	}
+
+	.hero-status {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.2rem;
 	}
 
 	.filter-bar {

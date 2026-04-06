@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1365 340" role="img" aria-label="Register by SMS promo banner">
+  <defs>
+    <linearGradient id="sky2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#55677b"/>
+      <stop offset="0.58" stop-color="#607a95"/>
+      <stop offset="1" stop-color="#26384c"/>
+    </linearGradient>
+    <linearGradient id="pitch2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#56a34b"/>
+      <stop offset="1" stop-color="#2f8130"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1365" height="205" fill="url(#sky2)"/>
+  <rect y="190" width="1365" height="150" fill="url(#pitch2)"/>
+  <ellipse cx="690" cy="200" rx="700" ry="100" fill="#ffffff" opacity="0.08"/>
+
+  <text x="600" y="145" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="56" fill="#ffffff">TO REGISTER</text>
+  <text x="600" y="220" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="74" font-weight="900" fill="#ffffff">SMS GAME TO 79079</text>
+
+  <rect x="812" y="45" width="235" height="270" rx="26" fill="#161c24"/>
+  <rect x="830" y="66" width="198" height="210" rx="12" fill="#2532a8"/>
+  <rect x="844" y="120" width="170" height="52" rx="6" fill="#e8ebef"/>
+  <rect x="844" y="186" width="170" height="80" rx="6" fill="#2f394a"/>
+
+  <circle cx="104" cy="191" r="22" fill="#ffffff" opacity="0.72"/>
+  <polygon points="95,191 111,180 111,202" fill="#26374a"/>
+
+  <circle cx="1260" cy="191" r="22" fill="#ffffff" opacity="0.72"/>
+  <polygon points="1268,191 1252,180 1252,202" fill="#26374a"/>
+</svg>

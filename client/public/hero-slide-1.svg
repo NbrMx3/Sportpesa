@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1365 340" role="img" aria-label="Champions league football promo">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#334e6a"/>
+      <stop offset="0.55" stop-color="#3f5f7f"/>
+      <stop offset="1" stop-color="#1a2e3f"/>
+    </linearGradient>
+    <linearGradient id="pitch" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4e9a43"/>
+      <stop offset="1" stop-color="#2f7d31"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1365" height="200" fill="url(#sky)"/>
+  <rect y="180" width="1365" height="160" fill="url(#pitch)"/>
+  <ellipse cx="680" cy="196" rx="730" ry="110" fill="#9dc4d5" opacity="0.12"/>
+
+  <g transform="translate(370,70) rotate(-8)">
+    <rect x="0" y="0" width="430" height="94" fill="#ffd607"/>
+    <text x="25" y="58" font-family="Segoe UI,Arial,sans-serif" font-size="52" font-weight="900" fill="#0b2358">Champe, EPL, Laliga!!!</text>
+  </g>
+
+  <g transform="translate(440,170) rotate(-6)">
+    <rect x="0" y="0" width="335" height="112" fill="#0f2f89"/>
+    <text x="32" y="56" font-family="Segoe UI,Arial,sans-serif" font-size="66" font-style="italic" font-weight="700" fill="#ffffff">kucheza kwa</text>
+    <text x="34" y="100" font-family="Segoe UI,Arial,sans-serif" font-size="58" font-weight="900" fill="#ffd607">WEB &amp; APP NI FREE</text>
+  </g>
+
+  <circle cx="1040" cy="120" r="70" fill="#9a3a26"/>
+  <rect x="975" y="180" width="148" height="130" rx="38" fill="#bc2c1f"/>
+  <rect x="965" y="112" width="130" height="220" rx="16" fill="#1a2027"/>
+  <rect x="973" y="126" width="114" height="186" rx="8" fill="#2f3a4a"/>
+
+  <rect x="656" y="292" width="116" height="33" rx="6" fill="#111"/>
+  <text x="686" y="313" font-family="Segoe UI,Arial,sans-serif" font-size="18" fill="#fff">Google Play</text>
+</svg>
