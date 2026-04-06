@@ -57,6 +57,96 @@ export function mapBet(row) {
   };
 }
 
+function toIsoAtUtc(date, hour, minute) {
+  const value = new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      hour,
+      minute,
+      0,
+      0
+    )
+  );
+  return value.toISOString();
+}
+
+function buildMonthlyDefaultMatches(now = new Date()) {
+  const seasonTeams = [
+    "Arsenal",
+    "Chelsea",
+    "Liverpool",
+    "Manchester City",
+    "Manchester United",
+    "Tottenham",
+    "Newcastle",
+    "Brighton",
+    "Barcelona",
+    "Real Madrid",
+    "Atletico Madrid",
+    "Sevilla",
+    "Valencia",
+    "Villarreal",
+    "Inter",
+    "AC Milan",
+    "Juventus",
+    "Napoli",
+    "Roma",
+    "Lazio",
+    "Bayern Munich",
+    "Borussia Dortmund",
+    "Leverkusen",
+    "RB Leipzig",
+    "PSG",
+    "Marseille",
+    "Monaco",
+    "Lyon"
+  ];
+
+  const leagues = [
+    "Premier League",
+    "La Liga",
+    "Serie A",
+    "Bundesliga",
+    "Ligue 1"
+  ];
+
+  const firstDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  const daysInMonth = Math.round((nextMonth - firstDay) / (24 * 60 * 60 * 1000));
+  const fixtures = [];
+
+  for (let day = 0; day < daysInMonth; day += 1) {
+    const baseDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), day + 1));
+
+    for (let slot = 0; slot < 3; slot += 1) {
+      const teamOffset = (day * 6 + slot * 3) % seasonTeams.length;
+      const homeTeam = seasonTeams[teamOffset];
+      const awayTeam = seasonTeams[(teamOffset + 7 + day + slot) % seasonTeams.length];
+      const league = leagues[(day + slot) % leagues.length];
+      const startHour = slot === 0 ? 13 : slot === 1 ? 16 : 19;
+      const startMinute = slot === 2 ? 45 : 30;
+      const baseStrength = (day + slot * 2) % 9;
+      const home = Number((1.65 + (baseStrength % 5) * 0.24).toFixed(2));
+      const draw = Number((3.05 + (baseStrength % 4) * 0.2).toFixed(2));
+      const away = Number((2.15 + ((baseStrength + 3) % 6) * 0.29).toFixed(2));
+
+      fixtures.push({
+        homeTeam,
+        awayTeam,
+        league,
+        startTime: toIsoAtUtc(baseDate, startHour, startMinute),
+        home,
+        draw,
+        away
+      });
+    }
+  }
+
+  return fixtures;
+}
+
 export async function initDatabase() {
   await query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -158,32 +248,37 @@ export async function initDatabase() {
     );
   }
 
-  const matchCount = await query("SELECT COUNT(*)::int AS count FROM matches");
+  const now = new Date();
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
 
-  if (!matchCount.rows[0].count) {
-    const now = Date.now();
-    const defaults = [
-      {
-        homeTeam: "Arsenal",
-        awayTeam: "Chelsea",
-        league: "Premier League",
-        startTime: new Date(now + 60 * 60 * 1000).toISOString(),
-        home: 2.5,
-        draw: 3.2,
-        away: 2.8
-      },
-      {
-        homeTeam: "Barcelona",
-        awayTeam: "Atletico Madrid",
-        league: "La Liga",
-        startTime: new Date(now + 2 * 60 * 60 * 1000).toISOString(),
-        home: 1.8,
-        draw: 3.4,
-        away: 4.2
-      }
-    ];
+  const monthCount = await query(
+    `SELECT COUNT(*)::int AS count
+     FROM matches
+     WHERE start_time >= $1
+       AND start_time < $2`,
+    [monthStart.toISOString(), nextMonthStart.toISOString()]
+  );
+
+  if (monthCount.rows[0].count < 60) {
+    const defaults = buildMonthlyDefaultMatches(now);
 
     for (const match of defaults) {
+      const exists = await query(
+        `SELECT 1
+         FROM matches
+         WHERE home_team = $1
+           AND away_team = $2
+           AND league = $3
+           AND start_time = $4
+         LIMIT 1`,
+        [match.homeTeam, match.awayTeam, match.league, match.startTime]
+      );
+
+      if (exists.rowCount) {
+        continue;
+      }
+
       await query(
         `INSERT INTO matches (id, home_team, away_team, league, start_time, odds_home, odds_draw, odds_away, status)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'upcoming')`,

@@ -10,6 +10,41 @@ function asQueryString(value) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+function defaultMonthWindow() {
+  const now = new Date();
+  const first = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+  const last = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+
+  return {
+    from: first.toISOString(),
+    to: last.toISOString()
+  };
+}
+
+function getFootballQueryWindow(req) {
+  const date = asQueryString(req.query.date);
+  const from = asQueryString(req.query.from);
+  const to = asQueryString(req.query.to);
+
+  if (date || from || to) {
+    return {
+      date,
+      from,
+      to,
+      limit: asQueryString(req.query.limit)
+    };
+  }
+
+  const monthWindow = defaultMonthWindow();
+
+  return {
+    date,
+    from: monthWindow.from,
+    to: monthWindow.to,
+    limit: asQueryString(req.query.limit)
+  };
+}
+
 async function fetchInternalMatches() {
   const result = await query(
     `SELECT id, home_team, away_team, league, start_time, odds_home, odds_draw, odds_away, status, result
@@ -22,12 +57,7 @@ async function fetchInternalMatches() {
 
 router.get("/football/matches", async (req, res) => {
   try {
-    const payload = await fetchFootballMatchesAndOdds({
-      date: asQueryString(req.query.date),
-      from: asQueryString(req.query.from),
-      to: asQueryString(req.query.to),
-      limit: asQueryString(req.query.limit)
-    });
+    const payload = await fetchFootballMatchesAndOdds(getFootballQueryWindow(req));
 
     if (payload.matches.length) {
       return res.json({
@@ -52,12 +82,7 @@ router.get("/football/matches", async (req, res) => {
 
 router.get("/football/odds", async (req, res) => {
   try {
-    const payload = await fetchFootballMatchesAndOdds({
-      date: asQueryString(req.query.date),
-      from: asQueryString(req.query.from),
-      to: asQueryString(req.query.to),
-      limit: asQueryString(req.query.limit)
-    });
+    const payload = await fetchFootballMatchesAndOdds(getFootballQueryWindow(req));
 
     if (payload.matches.length) {
       const odds = payload.matches.map((match) => ({
