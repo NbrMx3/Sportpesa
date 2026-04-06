@@ -168,6 +168,31 @@ function buildOtherSportsMatches(monthValue: string): Match[] {
 	];
 }
 
+function buildLocalFootballMatches(monthValue: string): Match[] {
+	const fixtures = [
+		["Arsenal", "Chelsea", "Premier League", 2, 0],
+		["Liverpool", "Manchester City", "Premier League", 5, 1],
+		["Manchester United", "Tottenham", "Premier League", 11, 2],
+		["Barcelona", "Atletico Madrid", "La Liga", 3, 1],
+		["Real Madrid", "Sevilla", "La Liga", 9, 2],
+		["Valencia", "Villarreal", "La Liga", 17, 0],
+		["Inter", "AC Milan", "Serie A", 4, 2],
+		["Juventus", "Napoli", "Serie A", 13, 0],
+		["Roma", "Lazio", "Serie A", 21, 1],
+		["Bayern Munich", "Borussia Dortmund", "Bundesliga", 6, 1],
+		["Leverkusen", "RB Leipzig", "Bundesliga", 14, 2],
+		["PSG", "Marseille", "Ligue 1", 8, 0],
+		["Monaco", "Lyon", "Ligue 1", 19, 1],
+		["Newcastle", "Brighton", "Premier League", 24, 2],
+		["Atletico Madrid", "Real Madrid", "La Liga", 27, 0]
+	] as const;
+
+	return fixtures.map(([home, away, league, day, slot]) => ({
+		...createSportFixture(monthValue, "Football", home, away, day, slot),
+		league
+	}));
+}
+
 function toMonthInputValue(date = new Date()) {
 	const year = date.getFullYear();
 	const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -288,6 +313,7 @@ function App() {
 	const isLoggedIn = Boolean(accessToken && currentUser);
 	const monthOptions = useMemo(() => buildMonthOptions(), []);
 	const otherSportsMatches = useMemo(() => buildOtherSportsMatches(selectedMonth), [selectedMonth]);
+	const localFootballMatches = useMemo(() => buildLocalFootballMatches(selectedMonth), [selectedMonth]);
 
 	useEffect(() => {
 		const savedToken = localStorage.getItem("sportpesa_access_token") || "";
@@ -380,7 +406,9 @@ function App() {
 				} catch {
 					if (mounted) {
 						setApiOnline(false);
-						setError("Unable to fetch football matches. Ensure API is running on port 5001.");
+						setMatches(localFootballMatches);
+						setError("API unavailable. Showing local football fixtures and odds.");
+						setLiveStatus("Offline mode: local fixtures loaded");
 					}
 				}
 			} finally {
@@ -395,7 +423,7 @@ function App() {
 		return () => {
 			mounted = false;
 		};
-	}, [selectedMonth]);
+	}, [localFootballMatches, selectedMonth]);
 
 	useEffect(() => {
 		let mounted = true;
