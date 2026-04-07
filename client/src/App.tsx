@@ -2174,7 +2174,10 @@ function App() {
 								<section className="account-details-shell">
 									<header className="account-details-header">Account Details</header>
 									<div className="profile-banner">
-										<div className="profile-avatar" aria-hidden="true">
+										<div
+											className="profile-avatar"
+											aria-label={`Profile avatar for ${currentUser?.fullName || currentUser?.email || "user"}`}
+										>
 											{(currentUser?.fullName || currentUser?.email || "U")[0].toUpperCase()}
 										</div>
 										<div className="profile-info">
@@ -2185,8 +2188,13 @@ function App() {
 											</span>
 										</div>
 										<div className="profile-balance-chip">
-											<span className="profile-balance-label">Balance</span>
-											<span className="profile-balance-value">KSH {(currentUser?.balance ?? 0).toFixed(2)}</span>
+											<span className="profile-balance-label" aria-hidden="true">Balance</span>
+											<span
+												className="profile-balance-value"
+												aria-label={`Account balance: KSH ${(currentUser?.balance ?? 0).toFixed(2)}`}
+											>
+												KSH {(currentUser?.balance ?? 0).toFixed(2)}
+											</span>
 										</div>
 									</div>
 									<form className="account-details-form" onSubmit={handleAccountDetailsSave}>
