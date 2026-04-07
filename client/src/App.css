@@ -605,6 +605,94 @@ body {
 	border: 1px solid #2d485e;
 	background: #e8ecef;
 	color: #0d1e2c;
+	overflow: hidden;
+}
+
+.profile-banner {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding: 1.15rem 1.25rem;
+	background: linear-gradient(135deg, #0a2540 0%, #143d5e 100%);
+	border-bottom: 1px solid #1e3f5a;
+}
+
+.profile-avatar {
+	flex-shrink: 0;
+	width: 64px;
+	height: 64px;
+	border-radius: 50%;
+	background: var(--brand);
+	color: #ffffff;
+	font-size: 1.75rem;
+	font-weight: 900;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 0 0 3px rgba(10, 145, 222, 0.35);
+}
+
+.profile-info {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 0.22rem;
+	min-width: 0;
+}
+
+.profile-name {
+	font-size: 1.2rem;
+	font-weight: 800;
+	color: #edf4fa;
+	line-height: 1.2;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.profile-email {
+	font-size: 0.92rem;
+	color: #99b0c2;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.profile-role-badge {
+	display: inline-block;
+	padding: 0.1rem 0.5rem;
+	background: rgba(255, 154, 31, 0.13);
+	border: 1px solid rgba(255, 154, 31, 0.35);
+	color: #ff9a1f;
+	font-size: 0.78rem;
+	font-weight: 700;
+	border-radius: 20px;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	align-self: flex-start;
+	margin-top: 0.1rem;
+}
+
+.profile-balance-chip {
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 0.18rem;
+}
+
+.profile-balance-label {
+	font-size: 0.75rem;
+	color: #99b0c2;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+
+.profile-balance-value {
+	font-size: 1.25rem;
+	font-weight: 900;
+	color: #ffbf18;
+	letter-spacing: 0.02em;
 }
 
 .account-details-header {
@@ -721,7 +809,7 @@ body {
 	padding: 0.85rem 1.5rem;
 	border: 0;
 	border-radius: 12px;
-	background: #5988a8;
+	background: var(--brand);
 	color: #ffffff;
 	font-weight: 900;
 	font-size: 1.05rem;
@@ -732,7 +820,7 @@ body {
 }
 
 .settings-save-btn:hover {
-	background: #4d7c9b;
+	background: #0882c8;
 }
 
 .settings-save-btn:disabled {
@@ -1499,6 +1587,15 @@ body {
 
 	.settings-contact-block {
 		max-width: 100%;
+	}
+
+	.profile-banner {
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+
+	.profile-balance-chip {
+		align-items: flex-start;
 	}
 
 	.right-panel h3 {
