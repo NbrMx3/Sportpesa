@@ -2197,6 +2197,30 @@ function App() {
 							{activeAccountTool === "settings" && (
 								<section className="account-details-shell">
 									<header className="account-details-header">Account Details</header>
+									<div className="profile-banner">
+										<div
+											className="profile-avatar"
+											aria-label={`Profile avatar for ${currentUser?.fullName || currentUser?.email || "user"}`}
+										>
+											{(currentUser?.fullName || currentUser?.email || "U")[0].toUpperCase()}
+										</div>
+										<div className="profile-info">
+											<span className="profile-name">{currentUser?.fullName || "—"}</span>
+											<span className="profile-email">{currentUser?.email}</span>
+											<span className="profile-role-badge">
+												{currentUser?.role === "admin" ? "Admin" : "Member"}
+											</span>
+										</div>
+										<div className="profile-balance-chip">
+											<span className="profile-balance-label" aria-hidden="true">Balance</span>
+											<span
+												className="profile-balance-value"
+												aria-label={`Account balance: KSH ${(currentUser?.balance ?? 0).toFixed(2)}`}
+											>
+												KSH {(currentUser?.balance ?? 0).toFixed(2)}
+											</span>
+										</div>
+									</div>
 									<form className="account-details-form" onSubmit={handleAccountDetailsSave}>
 										<div className="account-details-block">
 											<h4>Login Details</h4>
