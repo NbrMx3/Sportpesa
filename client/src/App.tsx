@@ -434,9 +434,12 @@ function getMonthRange(monthValue: string) {
 
 	const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
 	const end = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+	const todayStart = new Date();
+	todayStart.setUTCHours(0, 0, 0, 0);
+	const clippedStart = start.getTime() < todayStart.getTime() ? todayStart : start;
 
 	return {
-		from: start.toISOString(),
+		from: clippedStart.toISOString(),
 		to: end.toISOString()
 	};
 }
@@ -446,7 +449,7 @@ function buildMonthOptions(rangeMonths = 12) {
 	const now = new Date();
 
 	for (let offset = 0; offset < rangeMonths; offset += 1) {
-		const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+		const date = new Date(now.getFullYear(), now.getMonth() + offset, 1);
 		const value = toMonthInputValue(date);
 		const label = date.toLocaleDateString("en-KE", {
 			month: "long",
@@ -461,6 +464,17 @@ function buildMonthOptions(rangeMonths = 12) {
 
 function matchDateKey(dateString: string) {
 	return dateString.slice(0, 10);
+}
+
+function startOfTodayUtc() {
+	const start = new Date();
+	start.setUTCHours(0, 0, 0, 0);
+	return start;
+}
+
+function isCurrentOrFutureMatch(match: Match, todayStart = startOfTodayUtc()) {
+	const kickoff = new Date(match.startTime);
+	return !Number.isNaN(kickoff.getTime()) && kickoff.getTime() >= todayStart.getTime();
 }
 
 function formatKickoff(dateString: string) {
@@ -1235,9 +1249,10 @@ function App() {
 	const topNavContent = TOP_NAV_CONTENT[activeTopNav];
 
 	const scopedMatches = useMemo(() => {
-		const merged = [...matches, ...otherSportsMatches];
 		const now = new Date();
-		const todayKey = matchDateKey(now.toISOString());
+		const todayStart = startOfTodayUtc();
+		const merged = [...matches, ...otherSportsMatches].filter((match) => isCurrentOrFutureMatch(match, todayStart));
+		const todayKey = matchDateKey(todayStart.toISOString());
 		const sorted = (items: Match[]) =>
 			items.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 

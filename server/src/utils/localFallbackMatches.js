@@ -15,6 +15,12 @@ function toDayWindow(dateOnly) {
   return { start, end };
 }
 
+function startOfTodayUtc(now = new Date()) {
+  const start = new Date(now);
+  start.setUTCHours(0, 0, 0, 0);
+  return start;
+}
+
 function asValidDateOrFallback(value, fallback) {
   if (!value) {
     return fallback;
@@ -36,13 +42,16 @@ function clampLimit(limit, defaultLimit = 120) {
 function buildRange(from, to, date, limit) {
   const safeDate = date || toDateOnlyUtc();
   const { start, end } = toDayWindow(safeDate);
+  const todayStart = startOfTodayUtc();
   const safeFrom = asValidDateOrFallback(from, start);
   const safeTo = asValidDateOrFallback(to, end);
+  const clippedFrom = safeFrom < todayStart ? todayStart : safeFrom;
 
   return {
-    from: safeFrom,
+    from: clippedFrom,
     to: safeTo,
-    limit: clampLimit(limit)
+    limit: clampLimit(limit),
+    empty: safeTo < clippedFrom
   };
 }
 
@@ -82,6 +91,10 @@ export function buildLocalFallbackMatches({ from, to, date, limit } = {}) {
 
   const range = buildRange(from, to, date, limit);
   const matches = [];
+
+  if (range.empty) {
+    return matches;
+  }
 
   const cursor = new Date(range.from);
   cursor.setUTCHours(0, 0, 0, 0);

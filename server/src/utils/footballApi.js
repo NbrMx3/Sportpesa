@@ -57,6 +57,12 @@ function toDayWindow(dateOnly) {
   return { start, end };
 }
 
+function startOfTodayUtc(now = new Date()) {
+  const start = new Date(now);
+  start.setUTCHours(0, 0, 0, 0);
+  return start;
+}
+
 function clampLimit(limit) {
   const parsed = Number(limit);
   if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -356,13 +362,18 @@ function mergeById(primaryMatches, oddsMatches) {
 function applyWindowAndLimit(matches, { date, from, to, limit }) {
   const today = date || toDateOnlyUtc();
   const { start, end } = toDayWindow(today);
+  const todayStart = startOfTodayUtc();
 
   const fromDate = from ? new Date(from) : start;
   const toDate = to ? new Date(to) : end;
 
-  const safeFrom = Number.isNaN(fromDate.getTime()) ? start : fromDate;
+  const safeFrom = Number.isNaN(fromDate.getTime()) ? todayStart : fromDate < todayStart ? todayStart : fromDate;
   const safeTo = Number.isNaN(toDate.getTime()) ? end : toDate;
   const safeLimit = clampLimit(limit);
+
+  if (safeTo < safeFrom) {
+    return [];
+  }
 
   const inWindow = matches.filter((match) => {
     const startTime = new Date(match.startTime);
@@ -373,8 +384,7 @@ function applyWindowAndLimit(matches, { date, from, to, limit }) {
     return startTime >= safeFrom && startTime <= safeTo;
   });
 
-  const selected = inWindow.length ? inWindow : matches;
-  return selected.slice(0, safeLimit);
+  return inWindow.slice(0, safeLimit);
 }
 
 async function fetchForLeagues(fetcher, options) {

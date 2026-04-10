@@ -19,6 +19,12 @@ function clampLimit(limit, defaultLimit = 120) {
   return Math.min(Math.floor(parsed), 300);
 }
 
+function startOfTodayUtc(now = new Date()) {
+  const start = new Date(now);
+  start.setUTCHours(0, 0, 0, 0);
+  return start;
+}
+
 function defaultMonthWindow(now = new Date()) {
   const first = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
   const last = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999));
@@ -46,43 +52,48 @@ function resolveInternalWindow(queryWindow = {}) {
   const date = asQueryString(queryWindow.date);
   const from = asQueryString(queryWindow.from);
   const to = asQueryString(queryWindow.to);
+  const todayStart = startOfTodayUtc();
+  let start;
+  let end;
 
   if (date) {
-    return toDayWindow(date);
+    ({ start, end } = toDayWindow(date));
+  } else {
+    const monthWindow = defaultMonthWindow();
+    start = new Date(from || monthWindow.from);
+    end = new Date(to || monthWindow.to);
   }
 
-  const monthWindow = defaultMonthWindow();
-  const start = new Date(from || monthWindow.from);
-  const end = new Date(to || monthWindow.to);
+  const safeStart = Number.isNaN(start.getTime()) ? todayStart : start;
+  const safeEnd = Number.isNaN(end.getTime()) ? todayStart : end;
+  const clippedStart = safeStart < todayStart ? todayStart : safeStart;
 
   return {
-    start: Number.isNaN(start.getTime()) ? new Date(monthWindow.from) : start,
-    end: Number.isNaN(end.getTime()) ? new Date(monthWindow.to) : end
+    start: clippedStart,
+    end: safeEnd,
+    empty: safeEnd < clippedStart
   };
 }
 
 export function getFootballQueryWindow(input = {}) {
-  const date = asQueryString(input.date);
-  const from = asQueryString(input.from);
-  const to = asQueryString(input.to);
   const limit = asQueryString(input.limit);
+  const { start, end } = resolveInternalWindow(input);
 
-  if (date || from || to) {
-    return { date, from, to, limit };
-  }
-
-  const monthWindow = defaultMonthWindow();
   return {
-    date,
-    from: monthWindow.from,
-    to: monthWindow.to,
+    from: start.toISOString(),
+    to: end.toISOString(),
+    empty: end < start,
     limit
   };
 }
 
 export async function fetchInternalMatches(queryWindow = {}) {
-  const { start, end } = resolveInternalWindow(queryWindow);
+  const { start, end, empty } = resolveInternalWindow(queryWindow);
   const limit = clampLimit(queryWindow.limit);
+
+  if (empty) {
+    return [];
+  }
 
   const result = await query(
     `SELECT id, home_team, away_team, league, start_time, odds_home, odds_draw, odds_away, status, result
@@ -109,9 +120,21 @@ export function buildOddsPayload(matches, updatedAt) {
 
 export async function resolveFootballFeed(queryWindow = {}) {
   const updatedAt = new Date().toISOString();
+  const normalizedWindow = getFootballQueryWindow(queryWindow);
+
+  if (normalizedWindow.empty) {
+    return {
+      source: "filtered-window",
+      sport: "football",
+      live: true,
+      matches: [],
+      providerErrors: [],
+      updatedAt
+    };
+  }
 
   try {
-    const payload = await fetchFootballMatchesAndOdds(queryWindow);
+    const payload = await fetchFootballMatchesAndOdds(normalizedWindow);
 
     if (payload.matches.length) {
       return {
@@ -125,7 +148,7 @@ export async function resolveFootballFeed(queryWindow = {}) {
     }
 
     try {
-      const internalMatches = await fetchInternalMatches(queryWindow);
+      const internalMatches = await fetchInternalMatches(normalizedWindow);
       if (internalMatches.length) {
         return {
           source: "internal-fallback",
@@ -144,7 +167,7 @@ export async function resolveFootballFeed(queryWindow = {}) {
       source: "local-fallback",
       sport: "football",
       live: false,
-      matches: buildLocalFallbackMatches(queryWindow),
+      matches: buildLocalFallbackMatches(normalizedWindow),
       providerErrors: payload.errors || [],
       updatedAt
     };
@@ -153,7 +176,7 @@ export async function resolveFootballFeed(queryWindow = {}) {
       source: "local-fallback",
       sport: "football",
       live: false,
-      matches: buildLocalFallbackMatches(queryWindow),
+      matches: buildLocalFallbackMatches(normalizedWindow),
       providerErrors: ["External providers and database unavailable"],
       updatedAt
     };
