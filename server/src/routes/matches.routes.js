@@ -2,204 +2,59 @@ import express from "express";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
 import { mapMatch, query } from "../data/db.js";
 import { roundTo2 } from "../utils/betting.js";
-import { fetchFootballMatchesAndOdds } from "../utils/footballApi.js";
-import { buildLocalFallbackMatches } from "../utils/localFallbackMatches.js";
+import {
+  buildOddsPayload,
+  getFootballQueryWindow,
+  resolveFootballFeed
+} from "../utils/footballFeed.js";
 
 const router = express.Router();
 
-function asQueryString(value) {
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
-}
-
-function defaultMonthWindow() {
-  const now = new Date();
-  const first = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
-  const last = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999));
-
-  return {
-    from: first.toISOString(),
-    to: last.toISOString()
-  };
-}
-
-function getFootballQueryWindow(req) {
-  const date = asQueryString(req.query.date);
-  const from = asQueryString(req.query.from);
-  const to = asQueryString(req.query.to);
-
-  if (date || from || to) {
-    return {
-      date,
-      from,
-      to,
-      limit: asQueryString(req.query.limit)
-    };
-  }
-
-  const monthWindow = defaultMonthWindow();
-
-  return {
-    date,
-    from: monthWindow.from,
-    to: monthWindow.to,
-    limit: asQueryString(req.query.limit)
-  };
-}
-
-async function fetchInternalMatches() {
-  const result = await query(
-    `SELECT id, home_team, away_team, league, start_time, odds_home, odds_draw, odds_away, status, result
-     FROM matches
-     ORDER BY start_time ASC`
-  );
-
-  return result.rows.map(mapMatch);
-}
-
-function getLocalFallbackMatches(req) {
-  const queryWindow = getFootballQueryWindow(req);
-  return buildLocalFallbackMatches(queryWindow);
+function setRealtimeHeaders(res) {
+  res.set({
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+    Pragma: "no-cache",
+    Expires: "0",
+    "Surrogate-Control": "no-store"
+  });
 }
 
 router.get("/football/matches", async (req, res) => {
-  try {
-    const payload = await fetchFootballMatchesAndOdds(getFootballQueryWindow(req));
-
-    if (payload.matches.length) {
-      return res.json({
-        source: payload.source,
-        sport: "football",
-        matches: payload.matches
-      });
-    }
-
-    let fallbackMatches = [];
-    try {
-      fallbackMatches = await fetchInternalMatches();
-    } catch {
-      fallbackMatches = getLocalFallbackMatches(req);
-    }
-
-    return res.json({
-      source: fallbackMatches.length ? "internal-fallback" : "local-fallback",
-      sport: "football",
-      matches: fallbackMatches,
-      providerErrors: payload.errors || []
-    });
-  } catch {
-    const fallbackMatches = getLocalFallbackMatches(req);
-    return res.json({
-      source: "local-fallback",
-      sport: "football",
-      matches: fallbackMatches,
-      providerErrors: ["External providers and database unavailable"]
-    });
-  }
+  setRealtimeHeaders(res);
+  const payload = await resolveFootballFeed(getFootballQueryWindow(req.query));
+  return res.json(payload);
 });
 
 router.get("/football/odds", async (req, res) => {
-  try {
-    const payload = await fetchFootballMatchesAndOdds(getFootballQueryWindow(req));
-
-    if (payload.matches.length) {
-      const odds = payload.matches.map((match) => ({
-        matchId: match.id,
-        homeTeam: match.homeTeam,
-        awayTeam: match.awayTeam,
-        odds: match.odds,
-        updatedAt: new Date().toISOString()
-      }));
-
-      return res.json({
-        source: payload.source,
-        sport: "football",
-        odds
-      });
-    }
-
-    let fallbackMatches = [];
-    try {
-      fallbackMatches = await fetchInternalMatches();
-    } catch {
-      fallbackMatches = getLocalFallbackMatches(req);
-    }
-
-    const fallbackOdds = fallbackMatches.map((match) => ({
-      matchId: match.id,
-      homeTeam: match.homeTeam,
-      awayTeam: match.awayTeam,
-      odds: match.odds,
-      updatedAt: new Date().toISOString()
-    }));
-
-    return res.json({
-      source: fallbackMatches.length ? "internal-fallback" : "local-fallback",
-      sport: "football",
-      odds: fallbackOdds,
-      providerErrors: payload.errors || []
-    });
-  } catch {
-    const fallbackMatches = getLocalFallbackMatches(req);
-    const fallbackOdds = fallbackMatches.map((match) => ({
-      matchId: match.id,
-      homeTeam: match.homeTeam,
-      awayTeam: match.awayTeam,
-      odds: match.odds,
-      updatedAt: new Date().toISOString()
-    }));
-
-    return res.json({
-      source: "local-fallback",
-      sport: "football",
-      odds: fallbackOdds,
-      providerErrors: ["External providers and database unavailable"]
-    });
-  }
+  setRealtimeHeaders(res);
+  const payload = await resolveFootballFeed(getFootballQueryWindow(req.query));
+  return res.json({
+    source: payload.source,
+    sport: payload.sport,
+    live: payload.live,
+    odds: buildOddsPayload(payload.matches, payload.updatedAt),
+    providerErrors: payload.providerErrors,
+    updatedAt: payload.updatedAt
+  });
 });
 
 router.get("/matches", async (req, res) => {
-  try {
-    const result = await query(
-      `SELECT id, home_team, away_team, league, start_time, odds_home, odds_draw, odds_away, status, result
-       FROM matches
-       ORDER BY start_time ASC`
-    );
-    return res.json({ matches: result.rows.map(mapMatch) });
-  } catch {
-    return res.json({ matches: getLocalFallbackMatches(req), source: "local-fallback" });
-  }
+  setRealtimeHeaders(res);
+  const payload = await resolveFootballFeed(getFootballQueryWindow(req.query));
+  return res.json(payload);
 });
 
 router.get("/odds", async (req, res) => {
-  try {
-    const result = await query(
-      `SELECT id, home_team, away_team, odds_home, odds_draw, odds_away FROM matches ORDER BY start_time ASC`
-    );
-
-    const odds = result.rows.map((match) => ({
-      matchId: match.id,
-      homeTeam: match.home_team,
-      awayTeam: match.away_team,
-      odds: {
-        home: Number(match.odds_home),
-        draw: Number(match.odds_draw),
-        away: Number(match.odds_away)
-      },
-      updatedAt: new Date().toISOString()
-    }));
-
-    return res.json({ odds });
-  } catch {
-    const localOdds = getLocalFallbackMatches(req).map((match) => ({
-      matchId: match.id,
-      homeTeam: match.homeTeam,
-      awayTeam: match.awayTeam,
-      odds: match.odds,
-      updatedAt: new Date().toISOString()
-    }));
-
-    return res.json({ odds: localOdds, source: "local-fallback" });
-  }
+  setRealtimeHeaders(res);
+  const payload = await resolveFootballFeed(getFootballQueryWindow(req.query));
+  return res.json({
+    source: payload.source,
+    sport: payload.sport,
+    live: payload.live,
+    odds: buildOddsPayload(payload.matches, payload.updatedAt),
+    providerErrors: payload.providerErrors,
+    updatedAt: payload.updatedAt
+  });
 });
 
 router.patch("/matches/:matchId/odds", requireAuth, requireAdmin, async (req, res) => {

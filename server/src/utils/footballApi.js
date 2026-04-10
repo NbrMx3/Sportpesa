@@ -109,13 +109,17 @@ function toIsoDate(value) {
   return date.toISOString();
 }
 
-async function fetchJson(baseUrl, path, { apiKey, query = {} } = {}) {
+async function fetchJson(baseUrl, path, { apiKey, query = {}, apiKeyQueryParam, useAuthHeaders = true } = {}) {
   const url = new URL(path, baseUrl);
 
   for (const [key, value] of Object.entries(query)) {
     if (value !== undefined && value !== null && value !== "") {
       url.searchParams.set(key, String(value));
     }
+  }
+
+  if (apiKey && apiKeyQueryParam) {
+    url.searchParams.set(apiKeyQueryParam, apiKey);
   }
 
   const controller = new AbortController();
@@ -126,7 +130,7 @@ async function fetchJson(baseUrl, path, { apiKey, query = {} } = {}) {
       method: "GET",
       headers: {
         Accept: "application/json",
-        ...(apiKey ? { "x-api-key": apiKey, Authorization: `Bearer ${apiKey}` } : {})
+        ...(apiKey && useAuthHeaders ? { "x-api-key": apiKey, Authorization: `Bearer ${apiKey}` } : {})
       },
       signal: controller.signal
     });
@@ -144,6 +148,100 @@ async function fetchJson(baseUrl, path, { apiKey, query = {} } = {}) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function normalizeLabel(value) {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function pickOutcomePrice(outcomes, labels) {
+  const normalizedLabels = labels.map(normalizeLabel).filter(Boolean);
+
+  for (const outcome of outcomes || []) {
+    const outcomeLabel = normalizeLabel(
+      pickString(outcome?.name, outcome?.label, outcome?.outcome, outcome?.team, outcome?.title)
+    );
+
+    if (!outcomeLabel || !normalizedLabels.includes(outcomeLabel)) {
+      continue;
+    }
+
+    const price = pickNumber(outcome?.price, outcome?.odds, outcome?.decimal, outcome?.value);
+    if (price) {
+      return price;
+    }
+  }
+
+  return null;
+}
+
+function extractThreeWayOdds(item, homeTeam, awayTeam) {
+  const marketCandidates = [];
+
+  if (Array.isArray(item?.markets)) {
+    marketCandidates.push(...item.markets);
+  }
+
+  if (Array.isArray(item?.bookmakers)) {
+    for (const bookmaker of item.bookmakers) {
+      if (Array.isArray(bookmaker?.markets)) {
+        marketCandidates.push(...bookmaker.markets);
+      }
+    }
+  }
+
+  if (Array.isArray(item?.betting?.markets)) {
+    marketCandidates.push(...item.betting.markets);
+  }
+
+  if (Array.isArray(item?.outcomes)) {
+    marketCandidates.push({ key: "h2h", outcomes: item.outcomes });
+  }
+
+  if (Array.isArray(item?.values)) {
+    marketCandidates.push({ key: "h2h", outcomes: item.values });
+  }
+
+  let home = null;
+  let draw = null;
+  let away = null;
+
+  for (const market of marketCandidates) {
+    const marketName = normalizeLabel(pickString(market?.key, market?.name, market?.market, market?.type));
+    const outcomes = Array.isArray(market?.outcomes)
+      ? market.outcomes
+      : Array.isArray(market?.values)
+        ? market.values
+        : [];
+
+    if (!outcomes.length) {
+      continue;
+    }
+
+    const looksLikeThreeWayMarket =
+      !marketName ||
+      marketName.includes("h2h") ||
+      marketName.includes("1x2") ||
+      marketName.includes("winner") ||
+      marketName.includes("moneyline") ||
+      marketName.includes("match");
+
+    if (!looksLikeThreeWayMarket) {
+      continue;
+    }
+
+    home =
+      home ??
+      pickOutcomePrice(outcomes, [homeTeam, "home", "1", `${homeTeam} fc`]);
+    draw =
+      draw ??
+      pickOutcomePrice(outcomes, ["draw", "x", "tie"]);
+    away =
+      away ??
+      pickOutcomePrice(outcomes, [awayTeam, "away", "2", `${awayTeam} fc`]);
+  }
+
+  return { home, draw, away };
 }
 
 function mapMatchFromAny(item) {
@@ -179,9 +277,28 @@ function mapMatchFromAny(item) {
     return null;
   }
 
-  const home = pickNumber(item.odds?.home, item.odds_home, item.homeOdds, item.prices?.home);
-  const draw = pickNumber(item.odds?.draw, item.odds_draw, item.drawOdds, item.prices?.draw);
-  const away = pickNumber(item.odds?.away, item.odds_away, item.awayOdds, item.prices?.away);
+  const extracted = extractThreeWayOdds(item, homeTeam, awayTeam);
+  const home = pickNumber(
+    item.odds?.home,
+    item.odds_home,
+    item.homeOdds,
+    item.prices?.home,
+    extracted.home
+  );
+  const draw = pickNumber(
+    item.odds?.draw,
+    item.odds_draw,
+    item.drawOdds,
+    item.prices?.draw,
+    extracted.draw
+  );
+  const away = pickNumber(
+    item.odds?.away,
+    item.odds_away,
+    item.awayOdds,
+    item.prices?.away,
+    extracted.away
+  );
 
   return {
     id,
@@ -293,17 +410,15 @@ async function fetchForLeagues(fetcher, options) {
 }
 
 function providerQuery(league, { date, from, to, limit }) {
-  const safeDate = date || toDateOnlyUtc();
-  const { start, end } = toDayWindow(safeDate);
+  const explicitDate = typeof date === "string" && date.trim() ? date.trim() : "";
+  const seedDate = explicitDate || toDateOnlyUtc();
+  const { start, end } = toDayWindow(seedDate);
   const safeFrom = asValidDateOrFallback(from, start);
   const safeTo = asValidDateOrFallback(to, end);
 
-  return {
+  const query = {
     sport: "football",
     ...(league ? { league } : {}),
-    date: safeDate,
-    day: safeDate,
-    today: 1,
     from: safeFrom.toISOString(),
     to: safeTo.toISOString(),
     startDate: safeFrom.toISOString(),
@@ -316,11 +431,29 @@ function providerQuery(league, { date, from, to, limit }) {
     per_page: clampLimit(limit),
     limit: clampLimit(limit)
   };
+
+  const safeFromDate = safeFrom.toISOString().slice(0, 10);
+  const safeToDate = safeTo.toISOString().slice(0, 10);
+
+  if (explicitDate) {
+    query.date = explicitDate;
+    query.day = explicitDate;
+  } else if (safeFromDate === safeToDate) {
+    query.date = safeFromDate;
+    query.day = safeFromDate;
+
+    if (safeFromDate === toDateOnlyUtc()) {
+      query.today = 1;
+    }
+  }
+
+  return query;
 }
 
 async function fetchClearSportsMatches(league, options) {
   const payload = await fetchJson(config.clearSportsBaseUrl, config.clearSportsFootballGamesPath, {
     apiKey: config.clearSportsApiKey,
+    useAuthHeaders: true,
     query: providerQuery(league, options)
   });
 
@@ -330,6 +463,7 @@ async function fetchClearSportsMatches(league, options) {
 async function fetchClearSportsOdds(league, options) {
   const payload = await fetchJson(config.clearSportsBaseUrl, config.clearSportsOddsPath, {
     apiKey: config.clearSportsApiKey,
+    useAuthHeaders: true,
     query: providerQuery(league, options)
   });
 
@@ -339,6 +473,8 @@ async function fetchClearSportsOdds(league, options) {
 async function fetchOddsApiEvents(league, options) {
   const payload = await fetchJson(config.oddsApiBaseUrl, config.oddsApiFootballEventsPath, {
     apiKey: config.oddsApiKey,
+    apiKeyQueryParam: "apiKey",
+    useAuthHeaders: false,
     query: providerQuery(league, options)
   });
 
@@ -348,6 +484,8 @@ async function fetchOddsApiEvents(league, options) {
 async function fetchOddsApiOdds(league, options) {
   const payload = await fetchJson(config.oddsApiBaseUrl, config.oddsApiOddsPath, {
     apiKey: config.oddsApiKey,
+    apiKeyQueryParam: "apiKey",
+    useAuthHeaders: false,
     query: providerQuery(league, options)
   });
 

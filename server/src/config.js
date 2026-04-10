@@ -58,13 +58,14 @@ export const config = {
   clearSportsApiKey: process.env.CLEARSPORTS_API_KEY || "",
   clearSportsFootballGamesPath: process.env.CLEARSPORTS_FOOTBALL_GAMES_PATH || "/v1/football/games",
   clearSportsOddsPath: process.env.CLEARSPORTS_ODDS_PATH || "/v1/odds",
-  oddsApiBaseUrl: process.env.ODDS_API_BASE_URL || "https://api.odds-api.io/v1",
+  oddsApiBaseUrl: process.env.ODDS_API_BASE_URL || "https://api.odds-api.io",
   oddsApiKey: process.env.ODDS_API_KEY || "",
-  oddsApiFootballEventsPath: process.env.ODDS_API_FOOTBALL_EVENTS_PATH || "/events",
-  oddsApiOddsPath: process.env.ODDS_API_ODDS_PATH || "/odds",
+  oddsApiFootballEventsPath: process.env.ODDS_API_FOOTBALL_EVENTS_PATH || "/v3/events",
+  oddsApiOddsPath: process.env.ODDS_API_ODDS_PATH || "/v3/odds",
   footballLeague: process.env.FOOTBALL_LEAGUE || "epl",
   footballLeagues: process.env.FOOTBALL_LEAGUES || "",
   footballMaxMatches: Number(process.env.FOOTBALL_MAX_MATCHES || 120),
+  liveOddsRefreshMs: Math.max(Number(process.env.LIVE_ODDS_REFRESH_MS || 10000), 5000),
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
   adminGoogleEmails: String(process.env.ADMIN_GOOGLE_EMAILS || "")
     .split(",")

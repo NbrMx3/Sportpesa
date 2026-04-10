@@ -137,4 +137,6 @@ If your Render API URL is different, update `vercel.json` accordingly.
 ## Socket.io events
 
 - `odds:snapshot` (on connect)
-- `odds:update` (every 10 seconds)
+- `odds:update` (polled from the same live football feed used by `/api/matches` and `/api/odds`)
+
+`LIVE_ODDS_REFRESH_MS` controls the Socket.io refresh interval and defaults to `10000`.

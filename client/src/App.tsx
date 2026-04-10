@@ -180,6 +180,12 @@ type MyBet = {
 };
 
 type ApiPayload = Record<string, unknown>;
+type LiveFeedPayload = {
+	matches?: Match[];
+	source?: string;
+	live?: boolean;
+	updatedAt?: string;
+};
 
 const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:5001/api" : "/api");
 const SOCKET_BASE = import.meta.env.VITE_SOCKET_BASE || (import.meta.env.DEV ? "http://localhost:5001" : "");
@@ -485,6 +491,22 @@ async function parseJsonSafely(response: Response): Promise<ApiPayload | null> {
 function getPayloadString(payload: ApiPayload | null, key: string): string {
 	const value = payload?.[key];
 	return typeof value === "string" ? value : "";
+}
+
+function describeFootballFeed(source?: string, live?: boolean) {
+	if (live || source === "external") {
+		return "Live football feed connected";
+	}
+
+	if (source === "internal-fallback") {
+		return "Using internal fallback odds";
+	}
+
+	if (source === "local-fallback") {
+		return "Offline mode: local football feed loaded";
+	}
+
+	return "Football feed connected";
 }
 
 function isUserProfile(payload: unknown): payload is UserProfile {
@@ -916,11 +938,7 @@ function App() {
 
 					setMatches(footballMatches);
 					setError("");
-					setLiveStatus(
-						footballData.source === "internal-fallback"
-							? "Using internal fallback odds"
-							: "Live football feed connected"
-					);
+					setLiveStatus(describeFootballFeed(String(footballData.source || ""), Boolean(footballData.live)));
 				}
 			} catch {
 				try {
@@ -941,7 +959,7 @@ function App() {
 
 						setMatches(fallbackMatches);
 						setError("");
-						setLiveStatus("Using local match feed");
+						setLiveStatus(describeFootballFeed(String(fallbackData.source || ""), Boolean(fallbackData.live)));
 					}
 				} catch {
 					if (mounted) {
@@ -1076,7 +1094,7 @@ function App() {
 					});
 				});
 
-				setLiveStatus(data.source === "internal-fallback" ? "Fallback odds updates" : "Live football odds updating");
+				setLiveStatus(data.live ? "Live football odds updating" : describeFootballFeed(String(data.source || ""), Boolean(data.live)));
 			} catch {
 				setLiveStatus("Unable to reach odds feed");
 			}
@@ -1086,7 +1104,12 @@ function App() {
 		const pollId = window.setInterval(refreshFootballOdds, 15000);
 
 		const socket: Socket = io(SOCKET_BASE, {
-			transports: ["websocket"]
+			transports: ["websocket"],
+			query: {
+				from: monthRange.from,
+				to: monthRange.to,
+				limit: "300"
+			}
 		});
 
 		socket.on("connect", () => {
@@ -1097,19 +1120,20 @@ function App() {
 			setLiveStatus("Live feed disconnected");
 		});
 
-		socket.on("odds:snapshot", (payload: { matches: Match[] }) => {
+		socket.on("odds:snapshot", (payload: LiveFeedPayload) => {
 			const incoming = Array.isArray(payload.matches)
 				? payload.matches.map((match) => ({ ...match, sport: "Football" }))
 				: [];
 			setMatches(incoming);
+			setLiveStatus(describeFootballFeed(payload.source, payload.live));
 		});
 
-		socket.on("odds:update", (payload: { matches: Match[] }) => {
+		socket.on("odds:update", (payload: LiveFeedPayload) => {
 			const incoming = Array.isArray(payload.matches)
 				? payload.matches.map((match) => ({ ...match, sport: "Football" }))
 				: [];
 			setMatches(incoming);
-			setLiveStatus("Live odds updating");
+			setLiveStatus(payload.live ? "Live football odds updating" : describeFootballFeed(payload.source, payload.live));
 		});
 
 		socket.on("connect_error", () => {
