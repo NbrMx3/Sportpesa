@@ -616,6 +616,8 @@ button {
 	font-size: 1rem;
 	min-width: 1.2rem;
 	text-align: center;
+	opacity: 1;
+	filter: none;
 }
 
 .rail-link:hover {
