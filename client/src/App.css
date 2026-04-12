@@ -591,10 +591,109 @@ button {
 	background: #2a5a6f;
 }
 
-.rail-title.sub {
-	font-size: 0.8rem;
-	background: #254656;
-	color: #b0d4e8;
+/* New flat menu layout */
+.rail-section {
+	border-top: 1px solid #2b495b;
+}
+
+.rail-link {
+	border: 0;
+	border-bottom: 1px solid #2d4655;
+	background: #263844;
+	color: #ffffff;
+	padding: 0.66rem 0.85rem;
+	text-align: left;
+	font-size: 0.84rem;
+	font-weight: 800;
+	width: 100%;
+	transition: all 200ms ease;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.rail-link .sport-icon {
+	font-size: 1rem;
+	min-width: 1.2rem;
+	text-align: center;
+}
+
+.rail-link:hover {
+	background: #2b4658;
+}
+
+.rail-link.active {
+	background: #305e72;
+	border-left: 3px solid #0d87d2;
+	padding-left: 0.55rem;
+}
+
+/* Leagues Section */
+.rail-section.leagues-section {
+	background: #1f3845;
+}
+
+.leagues-list {
+	display: grid;
+}
+
+.league-item {
+	border: 0;
+	border-bottom: 1px solid #2d4655;
+	background: #263844;
+	color: #ffffff;
+	padding: 0.66rem 0.85rem;
+	text-align: left;
+	font-size: 0.84rem;
+	font-weight: 500;
+	display: flex;
+	align-items: center;
+	gap: 0.8rem;
+	transition: all 200ms ease;
+	cursor: pointer;
+}
+
+.league-flag {
+	font-size: 1.1rem;
+	min-width: 1.5rem;
+}
+
+.league-name {
+	flex: 1;
+	color: #ffffff;
+	font-weight: 600;
+}
+
+.league-item:hover {
+	background: #2b4658;
+	padding-left: 1.1rem;
+}
+
+/* Other Sports Section */
+.rail-section.other-sports-section {
+	background: #154c63;
+}
+
+.rail-section.other-sports-section .rail-link {
+	background: #154c63;
+	border-bottom-color: rgba(255, 255, 255, 0.1);
+	display: flex;
+	align-items: center;
+	gap: 0.7rem;
+}
+
+.rail-section.other-sports-section .rail-link:hover {
+	background: #1a5a73;
+}
+
+.rail-section.other-sports-section .rail-link.active {
+	background: #1f7a95;
+	border-left-color: #0d87d2;
+}
+
+.rail-link.sport-link {
+	font-size: 0.84rem;
+	padding: 0.72rem 0.85rem;
 }
 
 .rail-section.favorites-section {

@@ -99,26 +99,25 @@ const FOOTBALL_MENU_ITEMS: Array<{ key: ModuleKey; label: string }> = [
 	{ key: "upcoming", label: "Upcoming Games" }
 ];
 
-const EXTRA_SPORT_MENU_ITEMS: Array<{ key: ModuleKey; label: string }> = [
-	{ key: "efootball", label: "eFootball" },
-	{ key: "basketball", label: "Basketball" },
-	{ key: "tennis", label: "Tennis" }
+const TOP_LEAGUES_WITH_FLAGS = [
+	{ flag: "🏴󐁧󐁢󐁥󐁮󐁧󐁿", name: "Premier League", country: "England" },
+	{ flag: "🇪🇸", name: "Primera Division", country: "Spain" },
+	{ flag: "🇫🇷", name: "Ligue 1", country: "France" },
+	{ flag: "🇩🇪", name: "Bundesliga", country: "Germany" },
+	{ flag: "🇮🇹", name: "Serie A", country: "Italy" }
 ];
 
-const SPORTS_MENU_ITEMS = [
-	{ icon: "⚽", label: "Football" },
-	{ icon: "🎮", label: "eFootball" },
-	{ icon: "🏀", label: "Basketball" },
-	{ icon: "🎾", label: "Tennis" },
-	{ icon: "🏉", label: "Rugby Union" },
-	{ icon: "🏒", label: "Ice Hockey" },
-	{ icon: "🏐", label: "Volleyball" },
-	{ icon: "🤾", label: "Handball" },
-	{ icon: "🏏", label: "Cricket" },
-	{ icon: "⚾", label: "Baseball" },
-	{ icon: "🥊", label: "Boxing" },
-	{ icon: "🥋", label: "MMA" },
-	{ icon: "🏈", label: "American Football" }
+const EXTRA_SPORT_MENU_ITEMS: Array<{ key: ModuleKey; label: string; icon?: string }> = [
+	{ key: "efootball", label: "eFootball", icon: "🎮" },
+	{ key: "basketball", label: "Basketball", icon: "🏀" },
+	{ key: "tennis", label: "Tennis", icon: "🎾" },
+	{ key: "efootball", label: "Rugby Union", icon: "🏉" },
+	{ key: "basketball", label: "Ice Hockey", icon: "🏒" },
+	{ key: "tennis", label: "Volleyball", icon: "🏐" },
+	{ key: "efootball", label: "Handball", icon: "🤾" },
+	{ key: "basketball", label: "Cricket", icon: "🏏" },
+	{ key: "tennis", label: "Baseball", icon: "⚾" },
+	{ key: "efootball", label: "Boxing", icon: "🥊" }
 ];
 
 const HERO_SLIDES: HeroSlide[] = [
@@ -439,7 +438,6 @@ function SportsbookShell() {
 	const [apiRetryTick, setApiRetryTick] = useState(0);
 	const [activeModule, setActiveModule] = useState<ModuleKey>("highlights");
 	const [activeTopNav, setActiveTopNav] = useState<TopNavKey>("sports");
-	const [activeSport, setActiveSport] = useState("Football");
 	const [activeHeroSlide, setActiveHeroSlide] = useState(0);
 	const [heroTransitionReady, setHeroTransitionReady] = useState(false);
 	const [showSidebar, setShowSidebar] = useState(true);
@@ -1345,41 +1343,57 @@ function SportsbookShell() {
 							&lt;&lt; Hide
 						</button>
 
+						{/* Football Menu Items */}
 						<section className="rail-section">
-							<header className="rail-title">Sports Menu</header>
-							<div className="rail-links sports-menu">
-								{SPORTS_MENU_ITEMS.map((sport) => (
+							<div className="rail-links">
+								{FOOTBALL_MENU_ITEMS.map((item) => (
 									<button
 										type="button"
-										key={sport.label}
-										className={`rail-link sport-item ${activeSport === sport.label ? "active" : ""}`}
-										onClick={() => setActiveSport(sport.label)}
+										key={item.key}
+										className={`rail-link ${activeModule === item.key ? "active" : ""}`}
+										onClick={() => handleModuleChange(item.key)}
 									>
-										<span className="sport-icon">{sport.icon}</span>
-										<span className="sport-label">{sport.label}</span>
+										{item.label}
 									</button>
 								))}
 							</div>
 						</section>
 
-						{activeSport === "Football" && (
-							<section className="rail-section football-submenu">
-								<header className="rail-title sub">Football Categories</header>
-								<div className="rail-links">
-									{FOOTBALL_MENU_ITEMS.map((item) => (
+						{/* Top 5 Leagues Section */}
+						{activeModule === "top5" && (
+							<section className="rail-section leagues-section">
+								<header className="rail-title">Top 5 Leagues</header>
+								<div className="leagues-list">
+									{TOP_LEAGUES_WITH_FLAGS.map((league) => (
 										<button
 											type="button"
-											key={item.key}
-											className={`rail-link ${activeModule === item.key ? "active" : ""}`}
-											onClick={() => handleModuleChange(item.key)}
+											key={league.name}
+											className="league-item"
 										>
-											{item.label}
+											<span className="league-flag">{league.flag}</span>
+											<span className="league-name">{league.name}</span>
 										</button>
 									))}
 								</div>
 							</section>
 						)}
 
+						{/* Other Sports */}
+						<section className="rail-section other-sports-section">
+							{EXTRA_SPORT_MENU_ITEMS.map((item) => (
+								<button
+									type="button"
+									key={`${item.label}-${item.icon}`}
+									className={`rail-link sport-link ${activeModule === item.key ? "active" : ""}`}
+									onClick={() => handleModuleChange(item.key)}
+								>
+									<span className="sport-icon">{item.icon}</span>
+									<span>{item.label}</span>
+								</button>
+							))}
+						</section>
+
+						{/* Favorites Section */}
 						<section className="rail-section favorites-section">
 							<header className="rail-title">❤️ Favorites</header>
 							<div className="favorites-banner">
