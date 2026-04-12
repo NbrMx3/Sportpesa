@@ -134,8 +134,40 @@ const TOP_LEAGUES = new Set(["Premier League", "La Liga", "Serie A", "Bundesliga
 
 const PAYBILL_INFO = [
 	{ label: "M-PESA Paybill", value: "955100" },
-	{ label: "SMS Registration", value: "GAME to 79079" },
-	{ label: "Customer Care", value: "0755 079 079" }
+	{ label: "SMS Registration", value: "GAME to 79079" }
+];
+
+const CUSTOMER_CARE_CONTACTS = ["0755 079 079", "0709 079 079", "care@ke.sportpesa.com"];
+
+const RIGHT_RAIL_PROMOS: Array<{ key: string; title: string; subtitle: string; amount: string; className: string }> = [
+	{
+		key: "jackpot-3m",
+		title: "SportPesa JACKPOT",
+		subtitle: "WIN OVER",
+		amount: "KSH 3,000,000",
+		className: "promo-jackpot"
+	},
+	{
+		key: "win-5m",
+		title: "SportPesa",
+		subtitle: "WIN UPTO",
+		amount: "KSH 5,000,000",
+		className: "promo-plane"
+	},
+	{
+		key: "aviator",
+		title: "Aviator",
+		subtitle: "SHIKA UPTO",
+		amount: "12 MILLION",
+		className: "promo-aviator"
+	},
+	{
+		key: "league",
+		title: "SportPesa League",
+		subtitle: "TWENDE",
+		amount: "GAME",
+		className: "promo-league"
+	}
 ];
 
 function roundTo2(value: number) {
@@ -1623,6 +1655,32 @@ function SportsbookShell() {
 								))}
 							</div>
 						</div>
+					</section>
+
+					<section className="rail-card customer-care-card">
+						<header className="paybill-header">
+							<h3>CUSTOMER CARE</h3>
+						</header>
+						<div className="rail-card-body compact">
+							<p>We offer 24/7 customer care attention to SportPesa players.</p>
+							<div className="customer-care-list">
+								{CUSTOMER_CARE_CONTACTS.map((contact) => (
+									<div className="customer-care-row" key={contact}>
+										<strong>{contact}</strong>
+									</div>
+								))}
+							</div>
+						</div>
+					</section>
+
+					<section className="promo-stack" aria-label="SportPesa promos">
+						{RIGHT_RAIL_PROMOS.map((promo) => (
+							<article className={`promo-banner ${promo.className}`} key={promo.key}>
+								<h4>{promo.title}</h4>
+								<p>{promo.subtitle}</p>
+								<strong>{promo.amount}</strong>
+							</article>
+						))}
 					</section>
 				</aside>
 			</main>

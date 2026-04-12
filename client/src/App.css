@@ -856,6 +856,10 @@ button {
 	padding: 0.85rem 0.86rem 0.92rem;
 }
 
+.rail-card-body.compact {
+	gap: 0.7rem;
+}
+
 .wallet-banner {
 	display: flex;
 	justify-content: space-between;
@@ -1030,6 +1034,117 @@ button {
 	text-align: right;
 }
 
+.customer-care-list {
+	display: grid;
+	border: 1px solid #4f6878;
+	background: #3f586a;
+}
+
+.customer-care-row {
+	padding: 0.62rem 0.7rem;
+	border-top: 1px solid #6b8190;
+	text-align: center;
+}
+
+.customer-care-row:first-child {
+	border-top: 0;
+}
+
+.customer-care-row strong {
+	color: #f5fbff;
+	font-size: 0.96rem;
+	font-weight: 900;
+}
+
+.promo-stack {
+	display: grid;
+	gap: 0.72rem;
+}
+
+.promo-banner {
+	position: relative;
+	min-height: 150px;
+	padding: 1rem 1rem 1.1rem;
+	border: 1px solid #3f5a6f;
+	box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+	overflow: hidden;
+	display: grid;
+	align-content: start;
+	gap: 0.2rem;
+}
+
+.promo-banner::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(110deg, rgba(255, 255, 255, 0.08), transparent 45%);
+	pointer-events: none;
+}
+
+.promo-banner h4,
+.promo-banner p,
+.promo-banner strong {
+	margin: 0;
+	position: relative;
+	z-index: 1;
+	text-transform: uppercase;
+}
+
+.promo-banner h4 {
+	font-size: 1.06rem;
+	font-weight: 900;
+	letter-spacing: 0.02em;
+	color: #ffffff;
+}
+
+.promo-banner p {
+	font-size: 0.82rem;
+	font-weight: 800;
+	color: #f6d6ff;
+}
+
+.promo-banner strong {
+	font-size: 2rem;
+	line-height: 0.95;
+	font-weight: 900;
+	letter-spacing: 0.01em;
+	color: #44d5ff;
+	margin-top: 0.35rem;
+}
+
+.promo-jackpot {
+	background:
+		radial-gradient(circle at 82% 35%, rgba(114, 50, 255, 0.5), transparent 28%),
+		linear-gradient(135deg, #7f0268 0%, #540a83 45%, #3f1f89 100%);
+}
+
+.promo-plane {
+	background:
+		radial-gradient(circle at 78% 32%, rgba(35, 96, 255, 0.48), transparent 28%),
+		linear-gradient(135deg, #8b035f 0%, #5f0ea2 46%, #08388f 100%);
+}
+
+.promo-aviator {
+	background:
+		radial-gradient(circle at 88% 40%, rgba(255, 148, 68, 0.22), transparent 30%),
+		linear-gradient(135deg, #850265 0%, #65208f 46%, #6d3c08 100%);
+}
+
+.promo-league {
+	background:
+		radial-gradient(circle at 82% 35%, rgba(53, 103, 255, 0.4), transparent 28%),
+		linear-gradient(135deg, #17b3dc 0%, #1fa4de 38%, #1656c3 100%);
+}
+
+.promo-league p,
+.promo-league h4 {
+	color: #e9f8ff;
+}
+
+.promo-league strong {
+	color: #03208f;
+}
+
 @media (max-width: 1440px) {
 	.content-grid {
 		grid-template-columns: minmax(190px, 214px) minmax(0, 1fr) minmax(300px, 346px);
@@ -1058,6 +1173,10 @@ button {
 	.right-rail {
 		grid-column: 1 / -1;
 		grid-template-columns: 1fr;
+	}
+
+	.promo-stack {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 }
 
@@ -1099,6 +1218,10 @@ button {
 	}
 
 	.bet-code-row {
+		grid-template-columns: 1fr;
+	}
+
+	.promo-stack {
 		grid-template-columns: 1fr;
 	}
 }
