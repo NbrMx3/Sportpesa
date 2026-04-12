@@ -465,7 +465,7 @@ function SportsbookShell() {
 	const [liveStatus, setLiveStatus] = useState("Connecting...");
 	const [apiOnline, setApiOnline] = useState(true);
 	const [apiRetryTick, setApiRetryTick] = useState(0);
-	const [activeModule, setActiveModule] = useState<ModuleKey>("highlights");
+	const [activeModule, setActiveModule] = useState<ModuleKey>("popular");
 	const [activeTopNav, setActiveTopNav] = useState<TopNavKey>("sports");
 	const [selectedLeague, setSelectedLeague] = useState<string | null>(null);
 	const [activeHeroSlide, setActiveHeroSlide] = useState(0);
@@ -636,9 +636,15 @@ function SportsbookShell() {
 					? (footballData.matches as Match[]).map((match) => ({ ...match, sport: "Football" }))
 					: [];
 
-				setMatches(footballMatches);
-				setError("");
-				setLiveStatus(describeFootballFeed(String(footballData.source || ""), Boolean(footballData.live)));
+				if (footballMatches.length) {
+					setMatches(footballMatches);
+					setError("");
+					setLiveStatus(describeFootballFeed(String(footballData.source || ""), Boolean(footballData.live)));
+				} else {
+					setMatches(localFootballMatches);
+					setError("No live fixtures found for this view. Showing local fixtures and odds.");
+					setLiveStatus("Local fixtures loaded");
+				}
 			} catch {
 				try {
 					const fallbackResponse = await fetch(`${API_BASE}/matches?${queryString}`);
@@ -656,9 +662,15 @@ function SportsbookShell() {
 						? (fallbackData.matches as Match[]).map((match) => ({ ...match, sport: "Football" }))
 						: [];
 
-					setMatches(fallbackMatches);
-					setError("");
-					setLiveStatus(describeFootballFeed(String(fallbackData.source || ""), Boolean(fallbackData.live)));
+					if (fallbackMatches.length) {
+						setMatches(fallbackMatches);
+						setError("");
+						setLiveStatus(describeFootballFeed(String(fallbackData.source || ""), Boolean(fallbackData.live)));
+					} else {
+						setMatches(localFootballMatches);
+						setError("No fixtures available from API. Showing local fixtures and odds.");
+						setLiveStatus("Local fixtures loaded");
+					}
 				} catch {
 					if (!mounted) {
 						return;
