@@ -653,6 +653,7 @@ button {
 	gap: 0.8rem;
 	transition: all 200ms ease;
 	cursor: pointer;
+	width: 100%;
 }
 
 .league-flag {
@@ -666,9 +667,64 @@ button {
 	font-weight: 600;
 }
 
+.league-toggle {
+	font-size: 0.7rem;
+	color: #8ab0ca;
+	transition: transform 200ms ease;
+}
+
+.league-item.expanded .league-toggle {
+	transform: rotate(90deg);
+}
+
 .league-item:hover {
 	background: #2b4658;
 	padding-left: 1.1rem;
+}
+
+.league-item.expanded {
+	background: #2a5a6f;
+}
+
+.countries-list {
+	background: #1f3845;
+	border-bottom: 1px solid #2d4655;
+	display: grid;
+}
+
+.country-item {
+	border: 0;
+	border-bottom: 1px solid #22424f;
+	background: #1f3845;
+	color: #b0d4e8;
+	padding: 0.6rem 0.85rem 0.6rem 2.2rem;
+	text-align: left;
+	font-size: 0.8rem;
+	font-weight: 500;
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	transition: all 200ms ease;
+	cursor: pointer;
+}
+
+.country-flag {
+	font-size: 1rem;
+	min-width: 1.3rem;
+}
+
+.country-name {
+	flex: 1;
+	color: #b0d4e8;
+}
+
+.country-item:last-child {
+	border-bottom: none;
+}
+
+.country-item:hover {
+	background: #254656;
+	padding-left: 2.4rem;
 }
 
 /* Other Sports Section */

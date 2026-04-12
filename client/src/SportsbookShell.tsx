@@ -100,11 +100,31 @@ const FOOTBALL_MENU_ITEMS: Array<{ key: ModuleKey; label: string }> = [
 ];
 
 const TOP_LEAGUES_WITH_FLAGS = [
-	{ flag: "🏴󐁧󐁢󐁥󐁮󐁧󐁿", name: "Premier League", country: "England" },
-	{ flag: "🇪🇸", name: "Primera Division", country: "Spain" },
-	{ flag: "🇫🇷", name: "Ligue 1", country: "France" },
-	{ flag: "🇩🇪", name: "Bundesliga", country: "Germany" },
-	{ flag: "🇮🇹", name: "Serie A", country: "Italy" }
+	{
+		name: "Premier League",
+		flag: "🏴󐁧󐁢󐁥󐁮󐁧󐁿",
+		countries: [{ name: "England", flag: "🏴󐁧󐁢󐁥󐁮󐁧󐁿" }]
+	},
+	{
+		name: "Primera Division",
+		flag: "🇪🇸",
+		countries: [{ name: "Spain", flag: "🇪🇸" }]
+	},
+	{
+		name: "Ligue 1",
+		flag: "🇫🇷",
+		countries: [{ name: "France", flag: "🇫🇷" }]
+	},
+	{
+		name: "Bundesliga",
+		flag: "🇩🇪",
+		countries: [{ name: "Germany", flag: "🇩🇪" }]
+	},
+	{
+		name: "Serie A",
+		flag: "🇮🇹",
+		countries: [{ name: "Italy", flag: "🇮🇹" }]
+	}
 ];
 
 const EXTRA_SPORT_MENU_ITEMS: Array<{ key: ModuleKey; label: string; icon?: string }> = [
@@ -438,6 +458,7 @@ function SportsbookShell() {
 	const [apiRetryTick, setApiRetryTick] = useState(0);
 	const [activeModule, setActiveModule] = useState<ModuleKey>("highlights");
 	const [activeTopNav, setActiveTopNav] = useState<TopNavKey>("sports");
+	const [selectedLeague, setSelectedLeague] = useState<string | null>(null);
 	const [activeHeroSlide, setActiveHeroSlide] = useState(0);
 	const [heroTransitionReady, setHeroTransitionReady] = useState(false);
 	const [showSidebar, setShowSidebar] = useState(true);
@@ -1365,14 +1386,31 @@ function SportsbookShell() {
 								<header className="rail-title">Top 5 Leagues</header>
 								<div className="leagues-list">
 									{TOP_LEAGUES_WITH_FLAGS.map((league) => (
-										<button
-											type="button"
-											key={league.name}
-											className="league-item"
-										>
-											<span className="league-flag">{league.flag}</span>
-											<span className="league-name">{league.name}</span>
-										</button>
+										<div key={league.name}>
+											<button
+												type="button"
+												className={`league-item ${selectedLeague === league.name ? "expanded" : ""}`}
+												onClick={() => setSelectedLeague(selectedLeague === league.name ? null : league.name)}
+											>
+												<span className="league-flag">{league.flag}</span>
+												<span className="league-name">{league.name}</span>
+												<span className="league-toggle">{selectedLeague === league.name ? "▼" : "▶"}</span>
+											</button>
+											{selectedLeague === league.name && (
+												<div className="countries-list">
+													{league.countries.map((country) => (
+														<button
+															type="button"
+															key={country.name}
+															className="country-item"
+														>
+															<span className="country-flag">{country.flag}</span>
+															<span className="country-name">{country.name}</span>
+														</button>
+													))}
+												</div>
+											)}
+										</div>
 									))}
 								</div>
 							</section>
