@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { io, type Socket } from "socket.io-client";
 import "./App.css";
 
-type Outcome = "home" | "draw" | "away";
+type MatchOutcome = "home" | "draw" | "away";
+type Outcome = MatchOutcome | "homeDraw" | "drawAway" | "homeAway" | "over25" | "under25" | "bttsYes" | "bttsNo";
 
 type Match = {
 	id: string;
@@ -11,9 +12,9 @@ type Match = {
 	league: string;
 	sport: string;
 	startTime: string;
-	odds: Record<Outcome, number>;
+	odds: Record<MatchOutcome, number>;
 	status: string;
-	result: Outcome | null;
+	result: MatchOutcome | null;
 };
 
 type ModuleKey =
@@ -48,6 +49,8 @@ type HeroSlide = {
 type BetSelection = {
 	matchId: string;
 	outcome: Outcome;
+	apiOutcome: MatchOutcome | null;
+	outcomeLabel: string;
 	odd: number;
 	label: string;
 };
@@ -365,6 +368,19 @@ function getGoalMarkets(match: Match) {
 	};
 }
 
+const OUTCOME_LABELS: Record<Outcome, string> = {
+	home: "HOME",
+	draw: "DRAW",
+	away: "AWAY",
+	homeDraw: "1 OR X",
+	drawAway: "X OR 2",
+	homeAway: "1 OR 2",
+	over25: "OVER",
+	under25: "UNDER",
+	bttsYes: "YES",
+	bttsNo: "NO"
+};
+
 function sortMatches(matches: Match[]) {
 	return [...matches].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 }
@@ -659,9 +675,9 @@ function SportsbookShell() {
 				}
 
 				setMatches((previous) => {
-					const byId = new Map<string, Record<Outcome, number>>();
+					const byId = new Map<string, Record<MatchOutcome, number>>();
 
-					for (const entry of data.odds as Array<{ matchId?: string; odds?: Partial<Record<Outcome, number>> }>) {
+					for (const entry of data.odds as Array<{ matchId?: string; odds?: Partial<Record<MatchOutcome, number>> }>) {
 						if (!entry.matchId || !entry.odds) {
 							continue;
 						}
@@ -828,7 +844,13 @@ function SportsbookShell() {
 		setPanelMessage("");
 	}
 
-	function toggleSelection(match: Match, outcome: Outcome) {
+	function toggleSelection(
+		match: Match,
+		outcome: Outcome,
+		odd: number,
+		outcomeLabel: string,
+		apiOutcome: MatchOutcome | null = null
+	) {
 		clearFeedback();
 		setActiveSelection((previous) => {
 			const existing = previous[match.id];
@@ -844,7 +866,9 @@ function SportsbookShell() {
 				[match.id]: {
 					matchId: match.id,
 					outcome,
-					odd: match.odds[outcome],
+					apiOutcome,
+					outcomeLabel,
+					odd,
 					label: `${match.homeTeam} vs ${match.awayTeam}`
 				}
 			};
@@ -992,6 +1016,11 @@ function SportsbookShell() {
 			return;
 		}
 
+		if (betslip.some((selection) => !selection.apiOutcome)) {
+			setPanelError("Double Chance, Over/Under 2.5, and BTTS are selectable but currently not supported for placement. Use HOME, DRAW, or AWAY.");
+			return;
+		}
+
 		const parsedStake = Number(stake);
 		if (!parsedStake || parsedStake <= 0) {
 			setPanelError("Enter a valid stake amount.");
@@ -1011,7 +1040,7 @@ function SportsbookShell() {
 					stake: parsedStake,
 					selections: betslip.map((selection) => ({
 						matchId: selection.matchId,
-						predictedOutcome: selection.outcome
+						predictedOutcome: selection.apiOutcome
 					}))
 				})
 			});
@@ -1421,24 +1450,66 @@ function SportsbookShell() {
 												<strong>{match.awayTeam}</strong>
 											</div>
 
-											{(["home", "draw", "away"] as Outcome[]).map((outcome) => (
+											{(["home", "draw", "away"] as MatchOutcome[]).map((outcome) => (
 												<button
 													type="button"
 													key={outcome}
 													className={`market-button ${activeSelection[match.id]?.outcome === outcome ? "active" : ""}`}
-													onClick={() => toggleSelection(match, outcome)}
+													onClick={() => toggleSelection(match, outcome, match.odds[outcome], OUTCOME_LABELS[outcome], outcome)}
 												>
 													{match.odds[outcome].toFixed(2)}
 												</button>
 											))}
 
-											<div className="market-pill muted">{doubleChance.homeDraw.toFixed(2)}</div>
-											<div className="market-pill muted">{doubleChance.drawAway.toFixed(2)}</div>
-											<div className="market-pill muted">{doubleChance.homeAway.toFixed(2)}</div>
-											<div className="market-pill muted">{goalMarkets.over.toFixed(2)}</div>
-											<div className="market-pill muted">{goalMarkets.under.toFixed(2)}</div>
-											<div className="market-pill muted">{goalMarkets.bothTeamsYes.toFixed(2)}</div>
-											<div className="market-pill muted">{goalMarkets.bothTeamsNo.toFixed(2)}</div>
+													<button
+														type="button"
+														className={`market-button ${activeSelection[match.id]?.outcome === "homeDraw" ? "active" : ""}`}
+														onClick={() => toggleSelection(match, "homeDraw", doubleChance.homeDraw, OUTCOME_LABELS.homeDraw)}
+													>
+														{doubleChance.homeDraw.toFixed(2)}
+													</button>
+													<button
+														type="button"
+														className={`market-button ${activeSelection[match.id]?.outcome === "drawAway" ? "active" : ""}`}
+														onClick={() => toggleSelection(match, "drawAway", doubleChance.drawAway, OUTCOME_LABELS.drawAway)}
+													>
+														{doubleChance.drawAway.toFixed(2)}
+													</button>
+													<button
+														type="button"
+														className={`market-button ${activeSelection[match.id]?.outcome === "homeAway" ? "active" : ""}`}
+														onClick={() => toggleSelection(match, "homeAway", doubleChance.homeAway, OUTCOME_LABELS.homeAway)}
+													>
+														{doubleChance.homeAway.toFixed(2)}
+													</button>
+													<button
+														type="button"
+														className={`market-button ${activeSelection[match.id]?.outcome === "over25" ? "active" : ""}`}
+														onClick={() => toggleSelection(match, "over25", goalMarkets.over, OUTCOME_LABELS.over25)}
+													>
+														{goalMarkets.over.toFixed(2)}
+													</button>
+													<button
+														type="button"
+														className={`market-button ${activeSelection[match.id]?.outcome === "under25" ? "active" : ""}`}
+														onClick={() => toggleSelection(match, "under25", goalMarkets.under, OUTCOME_LABELS.under25)}
+													>
+														{goalMarkets.under.toFixed(2)}
+													</button>
+													<button
+														type="button"
+														className={`market-button ${activeSelection[match.id]?.outcome === "bttsYes" ? "active" : ""}`}
+														onClick={() => toggleSelection(match, "bttsYes", goalMarkets.bothTeamsYes, OUTCOME_LABELS.bttsYes)}
+													>
+														{goalMarkets.bothTeamsYes.toFixed(2)}
+													</button>
+													<button
+														type="button"
+														className={`market-button ${activeSelection[match.id]?.outcome === "bttsNo" ? "active" : ""}`}
+														onClick={() => toggleSelection(match, "bttsNo", goalMarkets.bothTeamsNo, OUTCOME_LABELS.bttsNo)}
+													>
+														{goalMarkets.bothTeamsNo.toFixed(2)}
+													</button>
 										</div>
 									);
 								})}
@@ -1479,7 +1550,7 @@ function SportsbookShell() {
 									{betslip.map((selection) => (
 										<article key={selection.matchId} className="slip-item">
 											<h4>{selection.label}</h4>
-											<p>{`${selection.outcome.toUpperCase()} @ ${selection.odd.toFixed(2)}`}</p>
+											<p>{`${selection.outcomeLabel} @ ${selection.odd.toFixed(2)}`}</p>
 										</article>
 									))}
 								</div>
