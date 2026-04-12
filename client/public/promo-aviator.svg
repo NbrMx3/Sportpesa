@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="320" viewBox="0 0 960 320">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8d006c"/>
+      <stop offset="0.6" stop-color="#6a138e"/>
+      <stop offset="1" stop-color="#774007"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="320" fill="url(#sky)"/>
+  <rect x="0" y="258" width="960" height="62" fill="#2f2d1f"/>
+  <line x1="0" y1="258" x2="960" y2="258" stroke="#f7ca6e" stroke-width="3"/>
+  <g fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-weight="800">
+    <text x="640" y="70" font-size="84" font-style="italic">Aviator</text>
+    <text x="74" y="120" font-size="56">SHIKA UPTO</text>
+    <text x="28" y="215" font-size="108" fill="#40d7ff">12 MILLION</text>
+    <text x="180" y="268" font-size="58">PER ROUND!</text>
+  </g>
+</svg>

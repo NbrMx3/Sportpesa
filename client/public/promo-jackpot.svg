@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="320" viewBox="0 0 960 320">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8b0065"/>
+      <stop offset="0.55" stop-color="#5f0fa3"/>
+      <stop offset="1" stop-color="#2f2f93"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="320" fill="url(#bg)"/>
+  <circle cx="840" cy="40" r="180" fill="#ffffff20"/>
+  <rect x="700" y="40" width="210" height="250" rx="20" fill="#17233a" transform="rotate(12 700 40)"/>
+  <rect x="718" y="62" width="174" height="192" rx="10" fill="#2f3f7d"/>
+  <g fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-weight="800">
+    <text x="40" y="68" font-size="64">SportPesa</text>
+    <text x="100" y="150" font-size="64" fill="#ef5be9">JACKPOT</text>
+    <text x="180" y="206" font-size="52">WIN OVER</text>
+    <text x="52" y="284" font-size="60" fill="#42d8ff">KSH 3,000,000</text>
+  </g>
+</svg>

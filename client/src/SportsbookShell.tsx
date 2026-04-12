@@ -139,34 +139,31 @@ const PAYBILL_INFO = [
 
 const CUSTOMER_CARE_CONTACTS = ["0755 079 079", "0709 079 079", "care@ke.sportpesa.com"];
 
-const RIGHT_RAIL_PROMOS: Array<{ key: string; title: string; subtitle: string; amount: string; className: string }> = [
+const RIGHT_RAIL_PROMOS: Array<{ key: string; image: string; alt: string }> = [
 	{
 		key: "jackpot-3m",
-		title: "SportPesa JACKPOT",
-		subtitle: "WIN OVER",
-		amount: "KSH 3,000,000",
-		className: "promo-jackpot"
+		image: "/promo-jackpot.svg",
+		alt: "SportPesa jackpot promo"
 	},
 	{
 		key: "win-5m",
-		title: "SportPesa",
-		subtitle: "WIN UPTO",
-		amount: "KSH 5,000,000",
-		className: "promo-plane"
+		image: "/promo-planes.svg",
+		alt: "SportPesa plane jackpot promo"
 	},
 	{
 		key: "aviator",
-		title: "Aviator",
-		subtitle: "SHIKA UPTO",
-		amount: "12 MILLION",
-		className: "promo-aviator"
+		image: "/promo-aviator.svg",
+		alt: "Aviator promo banner"
 	},
 	{
 		key: "league",
-		title: "SportPesa League",
-		subtitle: "TWENDE",
-		amount: "GAME",
-		className: "promo-league"
+		image: "/promo-league.svg",
+		alt: "SportPesa league promo banner"
+	},
+	{
+		key: "telegram",
+		image: "/promo-telegram.svg",
+		alt: "SportPesa Telegram promo banner"
 	}
 ];
 
@@ -1675,10 +1672,8 @@ function SportsbookShell() {
 
 					<section className="promo-stack" aria-label="SportPesa promos">
 						{RIGHT_RAIL_PROMOS.map((promo) => (
-							<article className={`promo-banner ${promo.className}`} key={promo.key}>
-								<h4>{promo.title}</h4>
-								<p>{promo.subtitle}</p>
-								<strong>{promo.amount}</strong>
+							<article className="promo-banner" key={promo.key}>
+								<img src={promo.image} alt={promo.alt} loading="lazy" />
 							</article>
 						))}
 					</section>

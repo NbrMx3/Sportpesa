@@ -1064,85 +1064,50 @@ button {
 .promo-banner {
 	position: relative;
 	min-height: 150px;
-	padding: 1rem 1rem 1.1rem;
+	padding: 0;
 	border: 1px solid #3f5a6f;
 	box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
 	overflow: hidden;
-	display: grid;
-	align-content: start;
-	gap: 0.2rem;
+	background: #172838;
+	transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
 }
 
-.promo-banner::after {
+.promo-banner::before {
 	content: "";
 	position: absolute;
-	inset: 0;
-	background: linear-gradient(110deg, rgba(255, 255, 255, 0.08), transparent 45%);
+	top: 0;
+	left: -120%;
+	width: 62%;
+	height: 100%;
+	background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.24) 50%, transparent 100%);
+	transition: left 320ms ease;
+	z-index: 2;
 	pointer-events: none;
 }
 
-.promo-banner h4,
-.promo-banner p,
-.promo-banner strong {
-	margin: 0;
-	position: relative;
-	z-index: 1;
-	text-transform: uppercase;
+.promo-banner img {
+	display: block;
+	width: 100%;
+	height: auto;
+	aspect-ratio: 3 / 1;
+	object-fit: cover;
+	transform: scale(1);
+	transition: transform 220ms ease, filter 220ms ease;
 }
 
-.promo-banner h4 {
-	font-size: 1.06rem;
-	font-weight: 900;
-	letter-spacing: 0.02em;
-	color: #ffffff;
+.promo-banner:hover {
+	transform: translateY(-3px);
+	border-color: #6e8ea5;
+	box-shadow: 0 14px 26px rgba(0, 0, 0, 0.45);
 }
 
-.promo-banner p {
-	font-size: 0.82rem;
-	font-weight: 800;
-	color: #f6d6ff;
+.promo-banner:hover::before {
+	left: 140%;
 }
 
-.promo-banner strong {
-	font-size: 2rem;
-	line-height: 0.95;
-	font-weight: 900;
-	letter-spacing: 0.01em;
-	color: #44d5ff;
-	margin-top: 0.35rem;
-}
-
-.promo-jackpot {
-	background:
-		radial-gradient(circle at 82% 35%, rgba(114, 50, 255, 0.5), transparent 28%),
-		linear-gradient(135deg, #7f0268 0%, #540a83 45%, #3f1f89 100%);
-}
-
-.promo-plane {
-	background:
-		radial-gradient(circle at 78% 32%, rgba(35, 96, 255, 0.48), transparent 28%),
-		linear-gradient(135deg, #8b035f 0%, #5f0ea2 46%, #08388f 100%);
-}
-
-.promo-aviator {
-	background:
-		radial-gradient(circle at 88% 40%, rgba(255, 148, 68, 0.22), transparent 30%),
-		linear-gradient(135deg, #850265 0%, #65208f 46%, #6d3c08 100%);
-}
-
-.promo-league {
-	background:
-		radial-gradient(circle at 82% 35%, rgba(53, 103, 255, 0.4), transparent 28%),
-		linear-gradient(135deg, #17b3dc 0%, #1fa4de 38%, #1656c3 100%);
-}
-
-.promo-league p,
-.promo-league h4 {
-	color: #e9f8ff;
-}
-
-.promo-league strong {
-	color: #03208f;
+.promo-banner:hover img {
+	transform: scale(1.03);
+	filter: saturate(1.06) contrast(1.03);
 }
 
 @media (max-width: 1440px) {
