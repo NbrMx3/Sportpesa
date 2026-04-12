@@ -379,6 +379,7 @@ function SportsbookShell() {
 	const [activeModule, setActiveModule] = useState<ModuleKey>("highlights");
 	const [activeTopNav, setActiveTopNav] = useState<TopNavKey>("sports");
 	const [activeHeroSlide, setActiveHeroSlide] = useState(0);
+	const [heroTransitionReady, setHeroTransitionReady] = useState(false);
 	const [showSidebar, setShowSidebar] = useState(true);
 	const [selectedMonth] = useState(toMonthInputValue);
 	const [searchOpen, setSearchOpen] = useState(false);
@@ -424,6 +425,14 @@ function SportsbookShell() {
 		}, 1000);
 
 		return () => window.clearInterval(timer);
+	}, []);
+
+	useEffect(() => {
+		const frameId = window.requestAnimationFrame(() => {
+			setHeroTransitionReady(true);
+		});
+
+		return () => window.cancelAnimationFrame(frameId);
 	}, []);
 
 	useEffect(() => {
@@ -1299,7 +1308,7 @@ function SportsbookShell() {
 				)}
 
 				<section className="center-stage">
-					<div className="hero-carousel">
+					<div className={`hero-carousel ${heroTransitionReady ? "ready" : ""}`}>
 						{HERO_SLIDES.map((slide, index) => (
 							<img
 								key={slide.id}
