@@ -19,7 +19,34 @@ function signRefreshToken(tokenId, userId) {
 
 function normalizePhone(phoneNumber) {
   if (!phoneNumber) return null;
-  return String(phoneNumber).replace(/\s+/g, "").trim();
+  return String(phoneNumber).trim().replace(/[\s-]+/g, "");
+}
+
+function buildPhoneVariants(phoneNumber) {
+  const normalized = normalizePhone(phoneNumber);
+  if (!normalized) return [];
+
+  const compact = normalized.startsWith("+") ? normalized.slice(1) : normalized;
+  const variants = new Set([normalized, compact]);
+
+  if (/^0\d{9}$/.test(compact)) {
+    const intl = `254${compact.slice(1)}`;
+    variants.add(intl);
+    variants.add(`+${intl}`);
+  }
+
+  if (/^254\d{9}$/.test(compact)) {
+    variants.add(`0${compact.slice(3)}`);
+    variants.add(`+${compact}`);
+  }
+
+  if (/^\+254\d{9}$/.test(normalized)) {
+    const noPlus = normalized.slice(1);
+    variants.add(noPlus);
+    variants.add(`0${noPlus.slice(3)}`);
+  }
+
+  return [...variants];
 }
 
 function isAdminGoogleEmail(email) {
@@ -108,12 +135,21 @@ router.post("/login", async (req, res) => {
     const isEmail = rawIdentifier.includes("@");
     const normalizedIdentifier = isEmail ? rawIdentifier.toLowerCase() : normalizePhone(rawIdentifier);
 
-    const result = await query(
-      `SELECT id, full_name, email, phone_number, role, balance, created_at, password_hash
-       FROM users
-       WHERE ${isEmail ? "email" : "phone_number"} = $1`,
-      [normalizedIdentifier]
-    );
+    const result = isEmail
+      ? await query(
+          `SELECT id, full_name, email, phone_number, role, balance, created_at, password_hash
+           FROM users
+           WHERE email = $1
+           LIMIT 1`,
+          [normalizedIdentifier]
+        )
+      : await query(
+          `SELECT id, full_name, email, phone_number, role, balance, created_at, password_hash
+           FROM users
+           WHERE phone_number = ANY($1::text[])
+           LIMIT 1`,
+          [buildPhoneVariants(normalizedIdentifier)]
+        );
     const user = result.rows[0];
 
     if (!user) {
@@ -157,12 +193,21 @@ router.post("/admin/login", async (req, res) => {
     const isEmail = rawIdentifier.includes("@");
     const normalizedIdentifier = isEmail ? rawIdentifier.toLowerCase() : normalizePhone(rawIdentifier);
 
-    const result = await query(
-      `SELECT id, full_name, email, phone_number, role, balance, created_at, password_hash
-       FROM users
-       WHERE ${isEmail ? "email" : "phone_number"} = $1`,
-      [normalizedIdentifier]
-    );
+    const result = isEmail
+      ? await query(
+          `SELECT id, full_name, email, phone_number, role, balance, created_at, password_hash
+           FROM users
+           WHERE email = $1
+           LIMIT 1`,
+          [normalizedIdentifier]
+        )
+      : await query(
+          `SELECT id, full_name, email, phone_number, role, balance, created_at, password_hash
+           FROM users
+           WHERE phone_number = ANY($1::text[])
+           LIMIT 1`,
+          [buildPhoneVariants(normalizedIdentifier)]
+        );
 
     const user = result.rows[0];
 
