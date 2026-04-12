@@ -446,6 +446,10 @@ button {
 	background: #22333e;
 	border: 1px solid #27485d;
 	box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+	display: flex;
+	flex-direction: column;
+	max-height: calc(100vh - 150px);
+	overflow-y: auto;
 }
 
 .hide-toggle,
@@ -513,6 +517,154 @@ button {
 .rail-link.extra {
 	border-bottom-color: rgba(255, 255, 255, 0.12);
 	background: rgba(0, 0, 0, 0.08);
+}
+
+.rail-links.sports-menu {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 0.5rem;
+	padding: 0.75rem;
+}
+
+.rail-link.sport-item {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.4rem;
+	padding: 0.8rem 0.6rem;
+	background: #1f3845;
+	border: 1px solid #2b495b;
+	border-bottom: none;
+	border-radius: 6px;
+	text-align: center;
+	font-size: 0.76rem;
+	font-weight: 700;
+	transition: all 220ms ease;
+}
+
+.rail-link.sport-item .sport-icon {
+	font-size: 1.4rem;
+	display: block;
+}
+
+.rail-link.sport-item .sport-label {
+	display: block;
+	line-height: 1.2;
+}
+
+.rail-link.sport-item:hover {
+	background: #2a4655;
+	border-color: #3a5a6d;
+	transform: translateY(-2px);
+}
+
+.rail-link.sport-item.active {
+	background: #0d87d2;
+	border-color: #0d87d2;
+	color: #ffffff;
+	box-shadow: 0 4px 12px rgba(13, 135, 210, 0.3);
+}
+
+.rail-section.football-submenu {
+	background: #1a2f3b;
+}
+
+.rail-section.football-submenu .rail-title {
+	background: #254656;
+	font-size: 0.8rem;
+	padding: 0.6rem 1rem;
+}
+
+.rail-section.football-submenu .rail-link {
+	background: #1a2f3b;
+	padding: 0.6rem 1rem;
+	font-size: 0.8rem;
+	border-bottom-color: #22424f;
+}
+
+.rail-section.football-submenu .rail-link:hover {
+	background: #203d4a;
+}
+
+.rail-section.football-submenu .rail-link.active {
+	background: #2a5a6f;
+}
+
+.rail-title.sub {
+	font-size: 0.8rem;
+	background: #254656;
+	color: #b0d4e8;
+}
+
+.rail-section.favorites-section {
+	margin-top: auto;
+	border-top: 2px solid #365872;
+}
+
+.favorites-banner {
+	padding: 1rem;
+	background: linear-gradient(135deg, #1a3a4a 0%, #0f2835 100%);
+	display: flex;
+	flex-direction: column;
+	gap: 0.8rem;
+}
+
+.favorites-message {
+	margin: 0;
+	font-size: 0.85rem;
+	color: #b0d4e8;
+	font-weight: 600;
+	text-align: center;
+	line-height: 1.4;
+}
+
+.user-welcome {
+	margin: 0;
+	font-size: 0.9rem;
+	color: #8ee0b3;
+	font-weight: 600;
+	text-align: center;
+}
+
+.favorites-buttons {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.6rem;
+}
+
+.favorites-btn {
+	border: 0;
+	padding: 0.7rem 0.8rem;
+	border-radius: 4px;
+	font-size: 0.8rem;
+	font-weight: 900;
+	transition: all 200ms ease;
+	cursor: pointer;
+	text-transform: uppercase;
+}
+
+.favorites-btn.join-btn {
+	background: #0d87d2;
+	color: #ffffff;
+}
+
+.favorites-btn.join-btn:hover {
+	background: #149ef1;
+	transform: translateY(-1px);
+	box-shadow: 0 4px 8px rgba(13, 135, 210, 0.3);
+}
+
+.favorites-btn.login-btn {
+	background: #1f3845;
+	color: #b0d4e8;
+	border: 1px solid #2b495b;
+}
+
+.favorites-btn.login-btn:hover {
+	background: #2a4655;
+	border-color: #3a5a6d;
+	transform: translateY(-1px);
 }
 
 .center-stage {

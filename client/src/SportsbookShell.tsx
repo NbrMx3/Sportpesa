@@ -105,6 +105,22 @@ const EXTRA_SPORT_MENU_ITEMS: Array<{ key: ModuleKey; label: string }> = [
 	{ key: "tennis", label: "Tennis" }
 ];
 
+const SPORTS_MENU_ITEMS = [
+	{ icon: "⚽", label: "Football" },
+	{ icon: "🎮", label: "eFootball" },
+	{ icon: "🏀", label: "Basketball" },
+	{ icon: "🎾", label: "Tennis" },
+	{ icon: "🏉", label: "Rugby Union" },
+	{ icon: "🏒", label: "Ice Hockey" },
+	{ icon: "🏐", label: "Volleyball" },
+	{ icon: "🤾", label: "Handball" },
+	{ icon: "🏏", label: "Cricket" },
+	{ icon: "⚾", label: "Baseball" },
+	{ icon: "🥊", label: "Boxing" },
+	{ icon: "🥋", label: "MMA" },
+	{ icon: "🏈", label: "American Football" }
+];
+
 const HERO_SLIDES: HeroSlide[] = [
 	{
 		id: "hero-1",
@@ -423,6 +439,7 @@ function SportsbookShell() {
 	const [apiRetryTick, setApiRetryTick] = useState(0);
 	const [activeModule, setActiveModule] = useState<ModuleKey>("highlights");
 	const [activeTopNav, setActiveTopNav] = useState<TopNavKey>("sports");
+	const [activeSport, setActiveSport] = useState("Football");
 	const [activeHeroSlide, setActiveHeroSlide] = useState(0);
 	const [heroTransitionReady, setHeroTransitionReady] = useState(false);
 	const [showSidebar, setShowSidebar] = useState(true);
@@ -1329,33 +1346,68 @@ function SportsbookShell() {
 						</button>
 
 						<section className="rail-section">
-							<header className="rail-title">Football</header>
-							<div className="rail-links">
-								{FOOTBALL_MENU_ITEMS.map((item) => (
+							<header className="rail-title">Sports Menu</header>
+							<div className="rail-links sports-menu">
+								{SPORTS_MENU_ITEMS.map((sport) => (
 									<button
 										type="button"
-										key={item.key}
-										className={`rail-link ${activeModule === item.key ? "active" : ""}`}
-										onClick={() => handleModuleChange(item.key)}
+										key={sport.label}
+										className={`rail-link sport-item ${activeSport === sport.label ? "active" : ""}`}
+										onClick={() => setActiveSport(sport.label)}
 									>
-										{item.label}
+										<span className="sport-icon">{sport.icon}</span>
+										<span className="sport-label">{sport.label}</span>
 									</button>
 								))}
 							</div>
 						</section>
 
-						<section className="rail-section secondary">
-							<div className="rail-links compact">
-								{EXTRA_SPORT_MENU_ITEMS.map((item) => (
-									<button
-										type="button"
-										key={item.key}
-										className={`rail-link extra ${activeModule === item.key ? "active" : ""}`}
-										onClick={() => handleModuleChange(item.key)}
-									>
-										{item.label}
-									</button>
-								))}
+						{activeSport === "Football" && (
+							<section className="rail-section football-submenu">
+								<header className="rail-title sub">Football Categories</header>
+								<div className="rail-links">
+									{FOOTBALL_MENU_ITEMS.map((item) => (
+										<button
+											type="button"
+											key={item.key}
+											className={`rail-link ${activeModule === item.key ? "active" : ""}`}
+											onClick={() => handleModuleChange(item.key)}
+										>
+											{item.label}
+										</button>
+									))}
+								</div>
+							</section>
+						)}
+
+						<section className="rail-section favorites-section">
+							<header className="rail-title">❤️ Favorites</header>
+							<div className="favorites-banner">
+								<p className="favorites-message">Login or register to save your favorites</p>
+								{!isLoggedIn ? (
+									<div className="favorites-buttons">
+										<button
+											type="button"
+											className="favorites-btn join-btn"
+											onClick={() => {
+												setShowRegisterPanel((previous) => !previous);
+												setAuthError("");
+												setAuthMessage("");
+											}}
+										>
+											JOIN US
+										</button>
+										<button
+											type="button"
+											className="favorites-btn login-btn"
+											onClick={() => setShowRegisterPanel(false)}
+										>
+											LOGIN
+										</button>
+									</div>
+								) : (
+									<p className="user-welcome">Welcome, {currentUser?.fullName}!</p>
+								)}
 							</div>
 						</section>
 					</aside>
