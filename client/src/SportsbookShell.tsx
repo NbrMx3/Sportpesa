@@ -64,6 +64,15 @@ type UserProfile = {
 	balance: number;
 };
 
+type AdminOverview = {
+	users: number;
+	bets: number;
+	pendingBets: number;
+	wonBets: number;
+	payouts: number;
+	matches: number;
+};
+
 type ApiPayload = Record<string, unknown>;
 
 type LiveFeedPayload = {
@@ -491,10 +500,15 @@ function SportsbookShell() {
 	const [panelError, setPanelError] = useState("");
 	const [placingBet, setPlacingBet] = useState(false);
 	const [oddsShortcut, setOddsShortcut] = useState<number | null>(null);
+	const [adminOverview, setAdminOverview] = useState<AdminOverview | null>(null);
+	const [adminLoading, setAdminLoading] = useState(false);
+	const [adminError, setAdminError] = useState("");
+	const [adminRefreshTick, setAdminRefreshTick] = useState(0);
 
 	const localFootballMatches = useMemo(() => buildLocalFootballMatches(selectedMonth), [selectedMonth]);
 	const extraSportMatches = useMemo(() => buildOtherSportsMatches(selectedMonth), [selectedMonth]);
 	const isLoggedIn = Boolean(accessToken && currentUser);
+	const isAdmin = currentUser?.role === "admin";
 
 	useEffect(() => {
 		localStorage.setItem("sportpesa_language", selectedLanguage);
@@ -826,6 +840,58 @@ function SportsbookShell() {
 			setActiveModule("today");
 		}
 	}, [activeTopNav]);
+
+	useEffect(() => {
+		if (!accessToken || !isAdmin) {
+			setAdminOverview(null);
+			setAdminError("");
+			setAdminLoading(false);
+			return;
+		}
+
+		let mounted = true;
+
+		async function loadAdminOverview() {
+			setAdminLoading(true);
+			setAdminError("");
+
+			try {
+				const response = await fetch(`${API_BASE}/admin/overview`, {
+					headers: {
+						Authorization: `Bearer ${accessToken}`
+					}
+				});
+
+				const data = await parseJsonSafely(response);
+				if (!response.ok) {
+					throw new Error(getPayloadString(data, "error") || `Failed to load admin overview (${response.status})`);
+				}
+
+				const overview = data?.overview as AdminOverview | undefined;
+				if (!mounted || !overview) {
+					return;
+				}
+
+				setAdminOverview(overview);
+			} catch (requestError) {
+				if (!mounted) {
+					return;
+				}
+
+				setAdminError(requestError instanceof Error ? requestError.message : "Failed to load admin overview");
+			} finally {
+				if (mounted) {
+					setAdminLoading(false);
+				}
+			}
+		}
+
+		void loadAdminOverview();
+
+		return () => {
+			mounted = false;
+		};
+	}, [API_BASE, accessToken, adminRefreshTick, isAdmin]);
 
 	const mainMatches = useMemo(() => {
 		const todayStart = startOfTodayUtc();
@@ -1294,6 +1360,48 @@ function SportsbookShell() {
 					{authMessage && <p className="top-message success">{authMessage}</p>}
 				</div>
 			</header>
+
+			{isAdmin && (
+				<section className="admin-dashboard-shell" aria-label="Admin dashboard">
+					<div className="admin-dashboard-header">
+						<h2>Admin Dashboard</h2>
+						<button type="button" onClick={() => setAdminRefreshTick((previous) => previous + 1)} disabled={adminLoading}>
+							{adminLoading ? "Refreshing..." : "Refresh"}
+						</button>
+					</div>
+
+					{adminError && <p className="admin-dashboard-message error">{adminError}</p>}
+
+					<div className="admin-dashboard-grid">
+						<article className="admin-stat-card">
+							<span>Users</span>
+							<strong>{adminOverview?.users ?? 0}</strong>
+						</article>
+						<article className="admin-stat-card">
+							<span>Total Bets</span>
+							<strong>{adminOverview?.bets ?? 0}</strong>
+						</article>
+						<article className="admin-stat-card">
+							<span>Pending Bets</span>
+							<strong>{adminOverview?.pendingBets ?? 0}</strong>
+						</article>
+						<article className="admin-stat-card">
+							<span>Won Bets</span>
+							<strong>{adminOverview?.wonBets ?? 0}</strong>
+						</article>
+						<article className="admin-stat-card">
+							<span>Payouts</span>
+							<strong>{adminOverview?.payouts ?? 0}</strong>
+						</article>
+						<article className="admin-stat-card">
+							<span>Matches</span>
+							<strong>{adminOverview?.matches ?? 0}</strong>
+						</article>
+					</div>
+
+					<p className="admin-dashboard-note">Admin account detected. Use this dashboard to monitor platform activity in real time.</p>
+				</section>
+			)}
 
 			<nav className="product-nav">
 				<div className="nav-list" role="tablist" aria-label="SportPesa products">

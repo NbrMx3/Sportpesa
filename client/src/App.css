@@ -902,6 +902,77 @@ button {
 	background: #ffffff;
 }
 
+.admin-dashboard-shell {
+	margin: 0.8rem 1rem 0;
+	padding: 0.95rem;
+	background: linear-gradient(180deg, #102838 0%, #0b1f2d 100%);
+	border: 1px solid #29516a;
+	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+	display: grid;
+	gap: 0.8rem;
+}
+
+.admin-dashboard-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+}
+
+.admin-dashboard-header h2 {
+	margin: 0;
+	font-size: 1.1rem;
+	letter-spacing: 0.02em;
+}
+
+.admin-dashboard-header button {
+	border: 1px solid #4c6f86;
+	background: #1a3a4f;
+	color: #e7f4fe;
+	padding: 0.45rem 0.8rem;
+	font-weight: 800;
+}
+
+.admin-dashboard-grid {
+	display: grid;
+	grid-template-columns: repeat(6, minmax(0, 1fr));
+	gap: 0.7rem;
+}
+
+.admin-stat-card {
+	padding: 0.7rem;
+	background: #153245;
+	border: 1px solid #2d536a;
+	display: grid;
+	gap: 0.3rem;
+}
+
+.admin-stat-card span {
+	font-size: 0.76rem;
+	color: #9ec1d8;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+}
+
+.admin-stat-card strong {
+	font-size: 1.2rem;
+	color: #ffffff;
+}
+
+.admin-dashboard-message {
+	margin: 0;
+}
+
+.admin-dashboard-message.error {
+	color: #ff9aaa;
+}
+
+.admin-dashboard-note {
+	margin: 0;
+	color: #b8d3e3;
+	font-size: 0.92rem;
+}
+
 .odds-board {
 	background: #112535;
 	border: 1px solid #27485d;
@@ -1430,6 +1501,10 @@ button {
 }
 
 @media (max-width: 1240px) {
+	.admin-dashboard-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
 	.masthead {
 		grid-template-columns: 1fr;
 		gap: 1.2rem;
@@ -1501,6 +1576,15 @@ button {
 }
 
 @media (max-width: 720px) {
+	.admin-dashboard-shell {
+		margin-left: 0.75rem;
+		margin-right: 0.75rem;
+	}
+
+	.admin-dashboard-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
 	.masthead,
 	.content-grid {
 		padding-left: 0.75rem;
