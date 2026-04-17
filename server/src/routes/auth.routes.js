@@ -5,6 +5,17 @@ import { v4 as uuidv4 } from "uuid";
 import { OAuth2Client } from "google-auth-library";
 import { config } from "../config.js";
 import { mapUser, query } from "../data/db.js";
+import {
+  initFallbackUsers,
+  findUserByEmail,
+  findUserByPhone,
+  createUser
+} from "../data/fallbackAuth.js";
+
+// Initialize fallback auth on startup
+await initFallbackUsers();
+
+const useFallbackAuth = !config.databaseUrl;
 
 const router = express.Router();
 const googleClient = new OAuth2Client(config.googleClientId || undefined);
@@ -72,52 +83,89 @@ router.post("/signup", async (req, res) => {
     const normalizedEmail = email ? String(email).toLowerCase().trim() : null;
     const normalizedPhone = normalizePhone(phoneNumber);
 
-    if (normalizedEmail) {
-      const existingByEmail = await query("SELECT id FROM users WHERE email = $1", [normalizedEmail]);
-      if (existingByEmail.rowCount) {
-        return res.status(409).json({ error: "Email already in use" });
+    if (useFallbackAuth) {
+      // Check in fallback store
+      if (normalizedEmail) {
+        const existing = await findUserByEmail(normalizedEmail);
+        if (existing) {
+          return res.status(409).json({ error: "Email already in use" });
+        }
       }
-    }
 
-    if (normalizedPhone) {
-      const existingByPhone = await query("SELECT id FROM users WHERE phone_number = $1", [
-        normalizedPhone
-      ]);
-      if (existingByPhone.rowCount) {
-        return res.status(409).json({ error: "Phone number already in use" });
+      if (normalizedPhone) {
+        const existing = await findUserByPhone(normalizedPhone);
+        if (existing) {
+          return res.status(409).json({ error: "Phone number already in use" });
+        }
       }
+
+      const passwordHash = await bcrypt.hash(password, 10);
+      const newUser = await createUser({
+        fullName: String(fullName).trim(),
+        email: normalizedEmail || `${uuidv4()}@phone.local`,
+        phoneNumber: normalizedPhone,
+        passwordHash,
+        role: "user",
+        balance: 0
+      });
+
+      const safeUser = mapUser(newUser);
+
+      const accessToken = signAccessToken(safeUser);
+      const refreshTokenId = uuidv4();
+      const refreshToken = signRefreshToken(refreshTokenId, safeUser.id);
+
+      return res.status(201).json({ user: safeUser, token: accessToken, accessToken, refreshToken });
+    } else {
+      // Database signup
+      if (normalizedEmail) {
+        const existingByEmail = await query("SELECT id FROM users WHERE email = $1", [normalizedEmail]);
+        if (existingByEmail.rowCount) {
+          return res.status(409).json({ error: "Email already in use" });
+        }
+      }
+
+      if (normalizedPhone) {
+        const existingByPhone = await query("SELECT id FROM users WHERE phone_number = $1", [
+          normalizedPhone
+        ]);
+        if (existingByPhone.rowCount) {
+          return res.status(409).json({ error: "Phone number already in use" });
+        }
+      }
+
+      const passwordHash = await bcrypt.hash(password, 10);
+      const userId = uuidv4();
+
+      const inserted = await query(
+        `INSERT INTO users (id, full_name, email, phone_number, password_hash, role, balance)
+         VALUES ($1, $2, $3, $4, $5, 'user', 0)
+         RETURNING id, full_name, email, phone_number, role, balance, created_at`,
+        [
+          userId,
+          String(fullName).trim(),
+          normalizedEmail || `${userId}@phone.local`,
+          normalizedPhone,
+          passwordHash
+        ]
+      );
+
+      const user = mapUser(inserted.rows[0]);
+      const accessToken = signAccessToken(user);
+      const refreshTokenId = uuidv4();
+      const refreshToken = signRefreshToken(refreshTokenId, user.id);
+
+      await query(
+        `INSERT INTO refresh_tokens (id, user_id, token, expires_at)
+         VALUES ($1, $2, $3, NOW() + INTERVAL '7 days')`,
+        [refreshTokenId, user.id, refreshToken]
+      );
+
+      return res.status(201).json({ user, token: accessToken, accessToken, refreshToken });
     }
-
-    const passwordHash = await bcrypt.hash(password, 10);
-    const userId = uuidv4();
-
-    const inserted = await query(
-      `INSERT INTO users (id, full_name, email, phone_number, password_hash, role, balance)
-       VALUES ($1, $2, $3, $4, $5, 'user', 0)
-       RETURNING id, full_name, email, phone_number, role, balance, created_at`,
-      [
-        userId,
-        String(fullName).trim(),
-        normalizedEmail || `${userId}@phone.local`,
-        normalizedPhone,
-        passwordHash
-      ]
-    );
-
-    const user = mapUser(inserted.rows[0]);
-    const accessToken = signAccessToken(user);
-    const refreshTokenId = uuidv4();
-    const refreshToken = signRefreshToken(refreshTokenId, user.id);
-
-    await query(
-      `INSERT INTO refresh_tokens (id, user_id, token, expires_at)
-       VALUES ($1, $2, $3, NOW() + INTERVAL '7 days')`,
-      [refreshTokenId, user.id, refreshToken]
-    );
-
-    return res.status(201).json({ user, token: accessToken, accessToken, refreshToken });
-  } catch {
-    return res.status(500).json({ error: "Failed to signup" });
+  } catch (error) {
+    console.error("Signup error:", error);
+    return res.status(500).json({ error: "Failed to signup", details: error?.message });
   }
 });
 
@@ -135,22 +183,32 @@ router.post("/login", async (req, res) => {
     const isEmail = rawIdentifier.includes("@");
     const normalizedIdentifier = isEmail ? rawIdentifier.toLowerCase() : normalizePhone(rawIdentifier);
 
-    const result = isEmail
-      ? await query(
-          `SELECT id, full_name, email, phone_number, role, balance, created_at, password_hash
-           FROM users
-           WHERE email = $1
-           LIMIT 1`,
-          [normalizedIdentifier]
-        )
-      : await query(
-          `SELECT id, full_name, email, phone_number, role, balance, created_at, password_hash
-           FROM users
-           WHERE phone_number = ANY($1::text[])
-           LIMIT 1`,
-          [buildPhoneVariants(normalizedIdentifier)]
-        );
-    const user = result.rows[0];
+    let user;
+
+    if (useFallbackAuth) {
+      // Use fallback auth when database is unavailable
+      user = isEmail
+        ? await findUserByEmail(normalizedIdentifier)
+        : await findUserByPhone(normalizedIdentifier);
+    } else {
+      // Use database auth
+      const result = isEmail
+        ? await query(
+            `SELECT id, full_name, email, phone_number, role, balance, created_at, password_hash
+             FROM users
+             WHERE email = $1
+             LIMIT 1`,
+            [normalizedIdentifier]
+          )
+        : await query(
+            `SELECT id, full_name, email, phone_number, role, balance, created_at, password_hash
+             FROM users
+             WHERE phone_number = ANY($1::text[])
+             LIMIT 1`,
+            [buildPhoneVariants(normalizedIdentifier)]
+          );
+      user = result.rows[0];
+    }
 
     if (!user) {
       return res.status(401).json({ error: "Invalid credentials" });
@@ -167,15 +225,18 @@ router.post("/login", async (req, res) => {
     const refreshTokenId = uuidv4();
     const refreshToken = signRefreshToken(refreshTokenId, safeUser.id);
 
-    await query(
-      `INSERT INTO refresh_tokens (id, user_id, token, expires_at)
-       VALUES ($1, $2, $3, NOW() + INTERVAL '7 days')`,
-      [refreshTokenId, safeUser.id, refreshToken]
-    );
+    if (!useFallbackAuth) {
+      await query(
+        `INSERT INTO refresh_tokens (id, user_id, token, expires_at)
+         VALUES ($1, $2, $3, NOW() + INTERVAL '7 days')`,
+        [refreshTokenId, safeUser.id, refreshToken]
+      );
+    }
 
     return res.json({ user: safeUser, token: accessToken, accessToken, refreshToken });
-  } catch {
-    return res.status(500).json({ error: "Failed to login" });
+  } catch (error) {
+    console.error("Login error:", error);
+    return res.status(500).json({ error: "Failed to login", details: error?.message });
   }
 });
 
